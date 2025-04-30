@@ -14,6 +14,13 @@ export default function Post() {
 
     const isAuthor = post && userData ? post.userId === userData.$id : false;
 
+    console.log("userData:", userData);
+    console.log("post:", post);
+    console.log("isAuthor:", isAuthor);
+
+    
+
+
     useEffect(() => {
         if (slug) {
             appwriteService.getPost(slug).then((post) => {
@@ -36,10 +43,15 @@ export default function Post() {
         <div className="py-8">
             <Container>
                 <div className="w-full flex justify-center mb-4 relative border rounded-xl p-2">
+
                     <img
-                        src={appwriteService.getFilePreview(post.featuredImage)}
+                        src={appwriteService.getFileView(post.featuredImage)}
                         alt={post.title}
                         className="rounded-xl"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/placeholder.png';
+                        }}
                     />
 
                     {isAuthor && (
@@ -60,7 +72,7 @@ export default function Post() {
                 </div>
                 <div className="browser-css">
                     {parse(post.content)}
-                    </div>
+                </div>
             </Container>
         </div>
     ) : null;

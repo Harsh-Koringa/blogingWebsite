@@ -23,7 +23,7 @@ export class Service {
                 featuredImage,
                 status,
                 userId,
-                createdAt: Date.now()
+                //createdAt: Date.now()
             });
         } catch (error) {
             throw error;
@@ -37,7 +37,7 @@ export class Service {
                 content,
                 featuredImage,
                 status,
-                updatedAt: Date.now()
+                //updatedAt: Date.now()
             });
         } catch (error) {
             console.log("Service :: updatePost :: error", error);
@@ -94,6 +94,43 @@ export class Service {
     getFilePreview(fileId) {
         return this.bucket.getFilePreview(conf.appwriteBucketId, fileId);
     }
+
+    getFileView(fileId) {
+        return this.bucket.getFileView(conf.appwriteBucketId, fileId);
+    }
+    
+
+    // getFilePreview(fileId) {
+    //     if (!fileId) return '/placeholder.png';
+        
+    //     try {
+    //       // For debugging - log the actual IDs being used
+    //       console.log("Getting preview for:", conf.appwriteBucketId, fileId);
+          
+    //       // Explicitly set width and quality to ensure proper preview generation
+    //       return this.bucket.getFilePreview(
+    //         conf.appwriteBucketId,
+    //         fileId,
+    //         800, // width
+    //         400, // height
+    //         'center', // gravity
+    //         85, // quality
+    //         0, // border width
+    //         '', // border color
+    //         0, // border radius
+    //         1, // opacity
+    //         0, // rotation
+    //         '', // background
+    //         'jpg' // output format - try changing this
+    //       );
+    //     } catch (error) {
+    //       console.error("Preview generation error:", error);
+    //       return '/placeholder.png';
+    //     }
+    //   }
+      
+    
+    
 };
 
 const service = new Service();
