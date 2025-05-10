@@ -19,24 +19,24 @@ function Header() {
     { name: "Add Post", slug: '/add-post', active: user },
   ]
   return (
-    <header className='py-3 shadow' style={{ backgroundColor: '#71C9CE' }}>
+    <header className='py-2 shadow bg-transparent backdrop-blur-sm fixed w-full z-10'>
 
       <Container>
         <nav className='flex'>
           <div className='mr-4'>
             <Link to='/'>
-              <img src={logo} alt="Logo" width="130px" />
+              <img src={logo} alt="Logo" width="55px" />
             </Link>
 
           </div>
-          <ul className='flex ml-auto my-10'>
+          <ul className='flex ml-auto my-1'>
             {navItems.map((item) =>
               item.active ? (
                 <li key={item.name}>
                   <button
                     onClick={() => navigate(item.slug)}
                     className='inline-block px-6 py-2 duration-200 hover:text-blue-700 rounded-full 
-                    text-white text-2xl font-bold font-serif tracking-wide'
+                    text-black text-2xl font-bold font-serif tracking-wide'
                   >{item.name}</button>
                 </li>
               ) : null

@@ -18,7 +18,7 @@ export default function Post() {
     console.log("post:", post);
     console.log("isAuthor:", isAuthor);
 
-    
+
 
 
     useEffect(() => {
@@ -42,37 +42,53 @@ export default function Post() {
     return post ? (
         <div className="py-8">
             <Container>
-                <div className="w-full flex justify-center mb-4 relative border rounded-xl p-2">
+                <div className="w-full flex justify-center mb-6">
+                    <h1 className="text-3xl md:text-4xl font-bold text-center max-w-3xl">{post.title}</h1>
+                </div>
 
-                    <img
-                        src={appwriteService.getFileView(post.featuredImage)}
-                        alt={post.title}
-                        className="rounded-xl"
-                        onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = '/placeholder.png';
-                        }}
-                    />
+                <div className="w-full flex justify-center mb-4 relative p-2">
+
+                    <div className="max-w-4xl max-h-[500px] flex justify-center">
+                        <img
+                            src={appwriteService.getFileView(post.featuredImage)}
+                            alt={post.title}
+                            className="max-w-full max-h-[300px] object-contain rounded-xl"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = '/placeholder.png';
+                            }}
+                        />
+                    </div>
 
                     {isAuthor && (
-                        <div className="absolute right-6 top-6">
+                        <div className="absolute right-6 bottom-2">
                             <Link to={`/edit-post/${post.$id}`}>
-                                <Button bgColor="bg-green-500" className="mr-3">
+                                <Button
+                                    // bgColor="bg-transparent"
+                                    bgColor="bg-white"
+                                    className="hover:bg-gray-200 transition-colors duration-300 mr-3 border-2 border-black"
+                                    textColor="text-black"
+                                >
                                     Edit
                                 </Button>
+
                             </Link>
-                            <Button bgColor="bg-red-500" onClick={deletePost}>
+                            <Button bgColor="bg-transparent" className="hover:bg-gray-200 transition-colors duration-300 mr-3 border-2 border-black" textColor="text-black" onClick={deletePost}>
                                 Delete
                             </Button>
                         </div>
                     )}
                 </div>
-                <div className="w-full mb-6">
-                    <h1 className="text-2xl font-bold">{post.title}</h1>
+                <div className="w-full flex justify-center mb-8">
+                    <div className="browser-css prose prose-lg max-w-3xl mx-auto px-4 text-gray-800 
+                  prose-headings:text-gray-900 prose-headings:font-bold
+                  prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+                  prose-img:rounded-md prose-img:mx-auto
+                  prose-hr:border-gray-300">
+                        {parse(post.content)}
+                    </div>
                 </div>
-                <div className="browser-css">
-                    {parse(post.content)}
-                </div>
+
             </Container>
         </div>
     ) : null;
