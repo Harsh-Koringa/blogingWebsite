@@ -10,12 +10,11 @@ function PostCard({ $id, title, featuredImage }) {
       <motion.div 
         className='w-full h-auto sm:h-[320px] p-3 rounded-md flex flex-col bg-[#010101] hover:shadow-lg hover:shadow-gray-700 transition-all duration-300'
         whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.98 }}
-        initial={{ opacity: 0, y: 50 }}
+        // initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.4 }}
-        exit={{ opacity: 0, y: -20 }}
+        // exit={{ opacity: 0, y: -20 }}
       >
         <motion.div className='w-full aspect-[3/2] mb-4 overflow-hidden'>
           <motion.img 
