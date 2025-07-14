@@ -42,7 +42,7 @@ function PostCard({ $id, title, content, featuredImage, status, author }) {
             </p>
           )}
 
-          <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="mt-4 flex flex-wrap gap-1 justify-start items-center">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -50,7 +50,7 @@ function PostCard({ $id, title, content, featuredImage, status, author }) {
                 e.preventDefault()
                 setLiked(!liked)
               }}
-              className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors
+              className={`flex items-center gap-1.5 rounded-full px-1 py-1.5 text-sm font-medium transition-colors
                 ${liked
                   ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-500'
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
@@ -64,7 +64,7 @@ function PostCard({ $id, title, content, featuredImage, status, author }) {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => e.preventDefault()}
-              className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+              className="flex items-center gap-1.5 rounded-full px-1 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
             >
               <MessageCircle className="h-4 w-4" />
               <span>Comment</span>
@@ -77,7 +77,7 @@ function PostCard({ $id, title, content, featuredImage, status, author }) {
                 e.preventDefault()
                 setFollowed(!followed)
               }}
-              className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors
+              className={`flex items-center gap-1.5 rounded-full px-1 py-1.5 text-sm font-medium transition-colors
                 ${followed
                   ? 'bg-brand-light/10 text-brand dark:bg-brand/20 dark:text-brand-light'
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
