@@ -1,30 +1,61 @@
-import React, {useId} from 'react'
+import React, { useId } from 'react'
+import { cn } from '../lib/utils'
 
-function Select({
-    options,
+const Select = React.forwardRef(function Select(
+  {
+    options = [],
     label,
-    className,
+    className = '',
+    error,
     ...props
-}, ref) {
-    const id = useId()
+  },
+  ref
+) {
+  const id = useId()
 
   return (
-    <div className='w-full'>
-       {label && <label htmlFor={id} className=''></label>}
-       <select
-       {...props}
-       id={id}
-       ref={ref}
-       className={`px-3 py-2 rounded-lg bg-white text-black outline-none focus:bg-gray-50 duration-200 border border-gray-200 w-full ${className}`}
-       >
-            {options?.map((option) => (
-                <option key={option} value={option}>
-                    {option}
-                </option>
-            ))}
-       </select>
+    <div className="space-y-2">
+      {label && (
+        <label
+          htmlFor={id}
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        >
+          {label}
+        </label>
+      )}
+      <select
+        id={id}
+        ref={ref}
+        className={cn(
+          `
+            flex h-10 w-full rounded-md border border-input bg-background
+            px-3 py-2 text-sm ring-offset-background
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+            disabled:cursor-not-allowed disabled:opacity-50
+          `,
+          className
+        )}
+        {...props}
+      >
+        {options?.map((option) => (
+          <option
+            key={option}
+            value={option}
+            className="bg-background"
+          >
+            {option}
+          </option>
+        ))}
+      </select>
+      {error && (
+        <p className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   )
-}
+})
 
-export default React.forwardRef(Select)
+Select.displayName = 'Select'
+
+export default Select

@@ -1,11 +1,12 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Button, Input, RTE, Select } from "..";
-import appwriteService from "../../appwrite/config";
 import { useNavigate } from "react-router-dom";
+import { Button, Input, RTE, Select } from "../index";
+import appwriteService from "../../appwrite/config";
 import { useSelector } from "react-redux";
+import { motion } from "framer-motion";
 
-export default function PostForm({ post }) {
+function PostForm({ post }) {
     const { register, handleSubmit, watch, setValue, control, getValues } = useForm({
         defaultValues: {
             title: post?.title || "",
@@ -15,20 +16,22 @@ export default function PostForm({ post }) {
         },
     });
 
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const userData = useSelector((state) => state.auth.userData);
 
     const submit = async (data) => {
+        setLoading(true);
         if (post) {
             const file = data.image[0] ? await appwriteService.uploadFile(data.image[0]) : null;
 
             if (file) {
-                appwriteService.deleteFile(post.featuredImage);
+                await appwriteService.deleteFile(post.featuredImage);
             }
 
             const dbPost = await appwriteService.updatePost(post.$id, {
                 ...data,
-                featuredImage: file ? file.$id : undefined,
+                featuredImage: file ? file.$id : post.featuredImage,
             });
 
             if (dbPost) {
@@ -47,6 +50,7 @@ export default function PostForm({ post }) {
                 }
             }
         }
+        setLoading(false);
     };
 
     const slugTransform = useCallback((value) => {
@@ -54,10 +58,9 @@ export default function PostForm({ post }) {
             return value
                 .trim()
                 .toLowerCase()
-                .replace(/[^a-zA-Z\d\s]+/g, "-")
-                .replace(/\s/g, "-");
-
-        return "";
+                .replace(/\s+/g, "-")
+                .replace(/[^\w-]+/g, "")
+                .replace(/--+/g, "-");
     }, []);
 
     React.useEffect(() => {
@@ -71,52 +74,55 @@ export default function PostForm({ post }) {
     }, [watch, slugTransform, setValue]);
 
     return (
-        <form onSubmit={handleSubmit(submit)} className="flex flex-wrap">
-            <div className="w-2/3 px-2">
+        <motion.form
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-8"
+            onSubmit={handleSubmit(submit)}
+        >
+            <div className="space-y-8">
                 <Input
-                    label="Title :"
-                    placeholder="Title"
-                    className="mb-4"
+                    label="Title"
+                    placeholder="Enter title"
+                    className="w-full"
                     {...register("title", { required: true })}
                 />
                 <Input
-                    label="Slug :"
-                    placeholder="Slug"
-                    className="mb-4"
+                    label="Slug"
+                    placeholder="Enter slug"
+                    className="w-full"
                     {...register("slug", { required: true })}
-                    onInput={(e) => {
-                        setValue("slug", slugTransform(e.currentTarget.value), { shouldValidate: true });
-                    }}
+                    readOnly
                 />
-                <RTE label="Content :" name="content" control={control} defaultValue={getValues("content")} />
-            </div>
-            <div className="w-1/3 px-2">
                 <Input
-                    label="Featured Image :"
+                    label="Featured Image"
                     type="file"
-                    className="mb-4"
+                    className="w-full"
                     accept="image/png, image/jpg, image/jpeg, image/gif"
                     {...register("image", { required: !post })}
                 />
                 {post && (
-                    <div className="w-full mb-4">
+                    <div className="w-full aspect-video">
                         <img
-                            src={appwriteService.getFileView(post.featuredImage)}
+                            src={appwriteService.getFilePreview(post.featuredImage)}
                             alt={post.title}
-                            className="rounded-lg"
+                            className="rounded-lg object-cover w-full h-full"
                         />
                     </div>
                 )}
+                <RTE label="Content" name="content" control={control} defaultValue={getValues("content")} />
                 <Select
                     options={["active", "inactive"]}
                     label="Status"
-                    className="mb-4"
+                    className="w-full"
                     {...register("status", { required: true })}
                 />
-                <Button type="submit" bgColor={post ? "bg-green-500" : undefined} className="w-full">
-                    {post ? "Update" : "Submit"}
+                <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Loading..." : post ? "Update" : "Submit"}
                 </Button>
             </div>
-        </form>
+        </motion.form>
     );
 }
+
+export default PostForm;
