@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
 
 function PostForm({ post }) {
-    const { register, handleSubmit, watch, setValue, control, getValues } = useForm({
+    const { register, handleSubmit, watch, setValue, control, getValues, formState: { errors } } = useForm({
         defaultValues: {
             title: post?.title || "",
             slug: post?.$id || "",
@@ -21,6 +21,9 @@ function PostForm({ post }) {
     const userData = useSelector((state) => state.auth.userData);
 
     const submit = async (data) => {
+        if (!post && (!data.image || !data.image[0])) {
+            return; // This will show the validation error
+        }
         setLoading(true);
         if (post) {
             const file = data.image[0] ? await appwriteService.uploadFile(data.image[0]) : null;
@@ -99,7 +102,10 @@ function PostForm({ post }) {
                     type="file"
                     className="w-full"
                     accept="image/png, image/jpg, image/jpeg, image/gif"
-                    {...register("image", { required: !post })}
+                    {...register("image", {
+                        required: !post
+                    })}
+                    error={errors.image ? true : false}
                 />
                 {post && (
                     <div className="w-full aspect-video">

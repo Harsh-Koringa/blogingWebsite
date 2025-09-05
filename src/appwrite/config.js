@@ -377,20 +377,142 @@ export class Service {
     //         85, // quality
     //         0, // border width
     //         '', // border color
-    //         0, // border radius
-    //         1, // opacity
-    //         0, // rotation
-    //         '', // background
-    //         'jpg' // output format - try changing this
-    //       );
-    //     } catch (error) {
-    //       console.error("Preview generation error:", error);
-    //       return '/placeholder.png';
-    //     }
-    //   }
+    // Profile Methods
+    async createProfile(userId, username, bio = "") {
+        try {
+            return await this.databases.createDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteProfilesCollection,
+                userId,
+                {
+                    userId,
+                    username,
+                    bio,
+                    //createdAt: new Date().toISOString(),
+                }
+            );
+        } catch (error) {
+            console.log("Service :: createProfile :: error", error);
+            throw error;
+        }
+    }
 
+    async getProfile(userId) {
+        try {
+            return await this.databases.getDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteProfilesCollection,
+                userId
+            );
+        } catch (error) {
+            console.log("Service :: getProfile :: error", error);
+            return null;
+        }
+    }
 
+    async updateProfile(userId, { username, bio }) {
+        try {
+            return await this.databases.updateDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteProfilesCollection,
+                userId,
+                {
+                    username,
+                    bio,
+                }
+            );
+        } catch (error) {
+            console.log("Service :: updateProfile :: error", error);
+            throw error;
+        }
+    }
 
+    // Comment Methods
+    async getCommentCount(postId) {
+        try {
+            const response = await this.databases.listDocuments(
+                conf.appwriteDatabaseId,
+                conf.appwriteCommentsCollection,
+                [Query.equal('postId', postId)]
+            );
+            return response.total;
+        } catch (error) {
+            console.log("Service :: getCommentCount :: error", error);
+            return 0;
+        }
+    }
+
+    async createComment(postId, userId, content) {
+        try {
+            const userProfile = await this.getProfile(userId);
+            if (!userProfile) throw new Error("User profile not found");
+
+            return await this.databases.createDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteCommentsCollection,
+                ID.unique(),
+                {
+                    postId,
+                    userId,
+                    content,
+                    username: userProfile.username,
+                    //createdAt: new Date().toISOString(),
+                    //updatedAt: new Date().toISOString()
+                }
+            );
+        } catch (error) {
+            console.log("Service :: createComment :: error", error);
+            throw error;
+        }
+    }
+
+    async getComments(postId) {
+        try {
+            const response = await this.databases.listDocuments(
+                conf.appwriteDatabaseId,
+                conf.appwriteCommentsCollection,
+                [
+                    Query.equal("postId", postId),
+                    /*Query.orderDesc("createdAt")*/
+                ]
+            );
+            return response.documents;
+        } catch (error) {
+            console.log("Service :: getComments :: error", error);
+            return [];
+        }
+    }
+
+    async updateComment(commentId, content) {
+        try {
+            return await this.databases.updateDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteCommentsCollection,
+                commentId,
+                {
+                    content,
+                    updatedAt: new Date().toISOString()
+                }
+            );
+        } catch (error) {
+            console.log("Service :: updateComment :: error", error);
+            throw error;
+        }
+    }
+
+    async deleteComment(commentId) {
+        try {
+            await this.databases.deleteDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteCommentsCollection,
+                commentId
+            );
+            return true;
+        } catch (error) {
+            console.log("Service :: deleteComment :: error", error);
+            return false;
+        }
+    }
 };
 
 const service = new Service();

@@ -19,6 +19,12 @@ function Header() {
       active: true
     },
     {
+      name: "Profile",
+      slug: '/profile',
+      icon: FileText,
+      active: authStatus
+    },
+    {
       name: "Login",
       slug: '/login',
       icon: FileText,

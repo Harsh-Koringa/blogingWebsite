@@ -9,6 +9,7 @@ import { useSelector } from 'react-redux'
 function PostCard({ $id, slug, title, content, featuredImage, status, author }) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
+  const [commentCount, setCommentCount] = useState(0)
   const [followed, setFollowed] = useState(false)
   const userData = useSelector((state) => state.auth.userData)
 
@@ -32,7 +33,15 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author }) 
       }
     };
 
+    const loadCommentCount = async () => {
+      if ($id) {
+        const count = await appwriteService.getCommentCount($id);
+        setCommentCount(count);
+      }
+    };
+
     loadLikes();
+    loadCommentCount();
   }, [$id, userData]);
 
   const handleLike = async (e) => {
@@ -112,15 +121,20 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author }) 
               <span>Like {likeCount > 0 && `(${likeCount})`}</span>
             </motion.button>
 
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => e.preventDefault()}
-              className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>Comment</span>
-            </motion.button>
+            <Link to={`/post/${$id}#comments`}>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = `/post/${$id}#comments`;
+                }}
+                className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span>Comment {commentCount > 0 && `(${commentCount})`}</span>
+              </motion.button>
+            </Link>
 
             <motion.button
               whileHover={{ scale: 1.1 }}

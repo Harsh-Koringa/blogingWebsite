@@ -14,10 +14,13 @@ import AuthLayout from "./AuthLayout";
 import Input from "./Input.jsx";
 import ThemeToggle from "./ThemeToggle";
 
+import Comments from "./Comments";
+
 export {
     Header,
     Footer,
     Container,
+    Comments,
     Logo,
     LogoutBtn,
     RTE,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import authService from '../appwrite/auth'
+import appwriteService from '../appwrite/config'
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../store/authSlice'
 import { Button, Input, Logo } from './index.js'
@@ -14,16 +15,53 @@ function Signup() {
     const { register, handleSubmit } = useForm()
 
     const create = async (data) => {
-        setError("")
+        setError("");
+
+        // Validate password
+        if (data.password.length < 8) {
+            setError("Password must be at least 8 characters long");
+            return;
+        }
+
+        // Validate username
+        if (data.username.length < 3) {
+            setError("Username must be at least 3 characters long");
+            return;
+        }
+
         try {
-            const userData = await authService.createAccount(data.email, data.password, data.name)
+            // First try to create the account
+            const userData = await authService.createAccount(data.email, data.password, data.name);
+
             if (userData) {
-                const userData = await authService.getCurrentUser()
-                if (userData) dispatch(login(userData));
-                navigate("/")
+                const currentUser = await authService.getCurrentUser();
+                if (currentUser) {
+                    try {
+                        // Then create the profile
+                        await appwriteService.createProfile(
+                            currentUser.$id,
+                            data.username || data.name
+                        );
+                        dispatch(login({ userData: currentUser }));
+                        navigate("/");
+                    } catch (profileError) {
+                        console.error("Error creating profile:", profileError);
+                        setError("Error creating user profile. Please try again.");
+                        // Clean up by logging out if profile creation fails
+                        await authService.logout();
+                    }
+                }
             }
         } catch (error) {
-            setError(error.message)
+            console.error("Signup error:", error);
+            // Handle specific error messages
+            if (error.message.includes("email already exists")) {
+                setError("This email is already registered. Please try logging in instead.");
+            } else if (error.message.includes("logout before creating")) {
+                setError("You are already logged in. Please log out first.");
+            } else {
+                setError(error.message || "Failed to create account. Please try again.");
+            }
         }
     }
 
@@ -61,6 +99,17 @@ function Signup() {
 
                 <form onSubmit={handleSubmit(create)} className="mt-8">
                     <div className="space-y-4">
+                        <Input
+                            label="Username"
+                            placeholder="Choose a username"
+                            {...register("username", {
+                                required: "Username is required",
+                                minLength: {
+                                    value: 3,
+                                    message: "Username must be at least 3 characters"
+                                }
+                            })}
+                        />
                         <Input
                             label="Full Name"
                             placeholder="Enter your full name"

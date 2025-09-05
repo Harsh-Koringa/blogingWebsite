@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import appwriteService from "../appwrite/config";
-import { Button, Container } from "../components";
+import { Button, Container, Comments } from "../components";
 import parse from "html-react-parser";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
@@ -131,7 +131,13 @@ export default function Post() {
                         >
                             {parse(post.content)}
                         </motion.div>
+                    </motion.div>
 
+                    <motion.div
+                        variants={childVariants}
+                        className="max-w-3xl mx-auto px-4"
+                    >
+                        <Comments postId={post.$id} />
                     </motion.div>
                 </Container>
             </motion.div>
