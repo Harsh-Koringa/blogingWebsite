@@ -43,18 +43,47 @@ export class Service {
     }
 
     // Your updated timestamp slug generator
-    async generateTimestampSlug(title) {
-        const baseSlug = this.slugify(title);
-        const timestamp = Math.floor(Date.now() / 1000);
-        const slug = `${baseSlug}-${timestamp}`;
+    // async generateTimestampSlug(title) {
+    //     const baseSlug = this.slugify(title);
+    //     const timestamp = Math.floor(Date.now() / 1000);
+    //     const slug = `${baseSlug}-${timestamp}`;
 
-        // Extremely unlikely to collide, but safety check
+    //     // Extremely unlikely to collide, but safety check
+    //     if (await this.slugExists(slug)) {
+    //         return `${slug}-${Math.random().toString(36).substr(2, 4)}`;
+    //     }
+
+    //     return slug;
+    // }
+
+
+    async generateTimestampSlug(title) {
+        // 1. Slugify and lowercase
+        const base = this.slugify(title);         // e.g. "zanskar-trekking-through-himalayas"
+
+        // 2. Use Unix-seconds timestamp (10 chars) for uniqueness
+        const ts = Math.floor(Date.now() / 1_000); // e.g. 1757065515
+
+        /* ──────────────────────────────────────────────
+           UID limit = 36
+           We need:  baseCut + "-" + ts   → baseCut + 11 chars
+           So baseCut must be ≤25 chars.
+        ────────────────────────────────────────────── */
+        const maxBaseLen = 25;
+        const baseCut = base.length > maxBaseLen ? base.slice(0, maxBaseLen) : base;
+
+        let slug = `${baseCut}-${ts}`;            // length ≤36
+
+        // 3. Rare collision check
         if (await this.slugExists(slug)) {
-            return `${slug}-${Math.random().toString(36).substr(2, 4)}`;
+            // still keep ≤36 by replacing last 4 chars with random 4-char suffix
+            const rand = Math.random().toString(36).slice(2, 6); // 4 safe chars
+            slug = `${baseCut.slice(0, maxBaseLen - 5)}-${rand}`; // max 25-5 +1 +4 =25
         }
 
-        return slug;
+        return slug; // always 36 chars or fewer, Appwrite-safe
     }
+
 
     // Updated createPost method
     async createPost({ title, content, featuredImage, status, userId }) {
