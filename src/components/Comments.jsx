@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import appwriteService from '../appwrite/config';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 
 function Comments({ postId }) {
+    const commentsRef = useRef(null);
+    const location = useLocation();
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -46,17 +49,14 @@ function Comments({ postId }) {
     };
 
     useEffect(() => {
-        // Check if URL has #comments and scroll to comments section
-        if (window.location.hash === '#comments') {
-            const element = document.getElementById('comments');
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth' });
-            }
+        // Check if we should scroll to comments
+        if (location.state?.scrollToComments && commentsRef.current) {
+            commentsRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-    }, []);
+    }, [location.state?.scrollToComments]);
 
     return (
-        <div id="comments" className="my-8 scroll-mt-16">
+        <div ref={commentsRef} className="my-8 scroll-mt-16">
             <h2 className="text-2xl font-bold mb-4">Comments</h2>
 
             {userData ? (

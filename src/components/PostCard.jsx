@@ -1,12 +1,13 @@
 // PostCard.jsx
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Heart, MessageCircle, UserPlus } from 'lucide-react'
 import appwriteService from "../appwrite/config"
 import { useSelector } from 'react-redux'
 
 function PostCard({ $id, slug, title, content, featuredImage, status, author }) {
+  const navigate = useNavigate();
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [commentCount, setCommentCount] = useState(0)
@@ -121,37 +122,19 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author }) 
               <span>Like {likeCount > 0 && `(${likeCount})`}</span>
             </motion.button>
 
-            <Link to={`/post/${$id}#comments`}>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href = `/post/${$id}#comments`;
-                }}
-                className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span>Comment {commentCount > 0 && `(${commentCount})`}</span>
-              </motion.button>
-            </Link>
-
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
-                e.preventDefault()
-                setFollowed(!followed)
+                e.preventDefault();
+                navigate(`/post/${$id}`, { state: { scrollToComments: true } });
               }}
-              className={`flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium transition-colors
-                ${followed
-                  ? 'bg-brand-light/10 text-brand dark:bg-brand/20 dark:text-brand-light'
-                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                }`}
+              className="flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
             >
-              <UserPlus className="h-4 w-4" />
-              <span>{followed ? 'Following' : 'Follow'}</span>
+              <MessageCircle className="h-4 w-4" />
+              <span>Comment {commentCount > 0 && `(${commentCount})`}</span>
             </motion.button>
+
           </div>
 
           {author && (
