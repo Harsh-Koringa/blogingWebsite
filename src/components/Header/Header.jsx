@@ -241,7 +241,12 @@ function Header() {
 
                 {authStatus && (
                   <>
-{/*<motion.button
+                    
+                    <div className="px-2">
+                      <LogoutBtn className="w-full justify-center" />
+                    </div>
+                    {/* Notification button - commented out for now
+                    <motion.button
                       className="flex items-center gap-2 w-full p-2 text-sm font-medium hover:bg-glass-bg rounded-lg theme-transition"
                     >
                       <Bell className="h-5 w-5" />
@@ -249,14 +254,7 @@ function Header() {
                       {hasNotifications && (
                         <span className="h-2 w-2 bg-red-500 rounded-full" />
                       )}
-                    </motion.button>
-                    <motion.button
-                      className="flex items-center gap-2 w-full p-2 text-sm font-medium hover:bg-glass-bg rounded-lg theme-transition"
-                      onClick={() => handleNavigation('/bookmarks')}
-                    >
-                      <BookmarkPlus className="h-5 w-5" />
-                      Bookmarks
-                    </motion.button>*/}
+                    </motion.button> */}
                   </>
                 )}
 
