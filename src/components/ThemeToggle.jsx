@@ -1,44 +1,29 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Sun, Moon } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useTheme } from '../context/ThemeContext'
 
 function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const initialDark = savedTheme === 'dark' || (!savedTheme && prefersDark)
-    setIsDark(initialDark)
-    document.documentElement.classList.toggle('dark', initialDark)
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = !isDark
-    setIsDark(newTheme)
-    document.documentElement.classList.toggle('dark', newTheme)
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light')
-  }
+  const { theme, toggleTheme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
     <motion.button
       whileTap={{ scale: 0.97 }}
+      whileHover={{ scale: 1.05 }}
       onClick={toggleTheme}
       aria-label="Toggle theme"
       className={`
+        glass-card
         flex items-center justify-center
         h-9 w-9 rounded-xl
-      
-        text-neutral-600 dark:text-neutral-300
-        
-        transition-colors duration-200 ease-in-out
-        
+        theme-transition
       `}
     >
       {isDark ? (
-        <Sun className="h-5 w-5 text-yellow-400" />
+        <Sun className="h-5 w-5" />
       ) : (
-        <Moon className="h-5 w-5 text-black" />
+        <Moon className="h-5 w-5" />
       )}
     </motion.button>
   )

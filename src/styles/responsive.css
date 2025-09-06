@@ -1,0 +1,94 @@
+@layer base {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --viewport-height: 100vh;
+
+    /* Dynamic spacing scale based on viewport */
+    --space-dynamic-1: clamp(0.25rem, 0.5vw, 0.5rem);
+    --space-dynamic-2: clamp(0.5rem, 1vw, 1rem);
+    --space-dynamic-3: clamp(1rem, 2vw, 2rem);
+    --space-dynamic-4: clamp(1.5rem, 3vw, 3rem);
+
+    /* Fluid typography */
+    --font-size-dynamic-base: clamp(16px, 1vw, 18px);
+    --font-size-dynamic-heading: clamp(24px, 4vw, 48px);
+
+    /* Touch targets */
+    --min-touch-target: 44px;
+    --touch-target-spacing: 8px;
+  }
+
+  /* Apply safe area paddings */
+  .h-safe-top {
+    height: var(--safe-top);
+  }
+
+  .h-safe-bottom {
+    height: var(--safe-bottom);
+  }
+
+  .pb-safe {
+    padding-bottom: var(--safe-bottom);
+  }
+
+  .pt-safe {
+    padding-top: var(--safe-top);
+  }
+
+  /* Mobile-first touch targets */
+  @media (max-width: 768px) {
+    button,
+    a,
+    input[type="submit"],
+    input[type="button"],
+    input[type="reset"] {
+      min-height: var(--min-touch-target);
+      min-width: var(--min-touch-target);
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="number"] {
+      font-size: 16px; /* Prevent iOS zoom */
+      min-height: var(--min-touch-target);
+      padding: var(--touch-target-spacing);
+    }
+
+    /* Improve touch target spacing */
+    label,
+    button + button,
+    a + a {
+      margin: var(--touch-target-spacing) 0;
+    }
+  }
+
+  /* Responsive breakpoints with dynamic spacing */
+  @media (min-width: 768px) {
+    .container {
+      padding-left: var(--space-dynamic-3);
+      padding-right: var(--space-dynamic-3);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: var(--space-dynamic-4);
+      padding-right: var(--space-dynamic-4);
+    }
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

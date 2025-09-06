@@ -1,19 +1,33 @@
-import React, {useEffect, useState} from 'react'
+import React, { useEffect, useState } from 'react'
 import appwriteService from "../appwrite/config";
-import {Container, PostCard} from '../components'
+import { Container, PostCard } from '../components'
 import { motion } from 'framer-motion'
+import { PostsGridSkeleton } from '../components/PostCardSkeleton'
 
 function Home() {
     const [posts, setPosts] = useState([])
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         appwriteService.getPosts().then((posts) => {
             if (posts) {
                 setPosts(posts.documents)
             }
+        }).finally(() => {
+            setLoading(false)
         })
     }, [])
-  
+
+    if (loading) {
+        return (
+            <div className="w-full py-8">
+                <Container>
+                    <PostsGridSkeleton />
+                </Container>
+            </div>
+        )
+    }
+
     if (posts.length === 0) {
         return (
             <div className="w-full py-8 mt-4 text-center">
@@ -29,18 +43,18 @@ function Home() {
             </div>
         )
     }
-    
+
     return (
         <div className='w-full py-8'>
             <Container>
                 <div className='flex flex-wrap'>
                     {posts.map((post, index) => (
-                        <motion.div 
-                            key={post.$id} 
+                        <motion.div
+                            key={post.$id}
                             className='p-2 w-full sm:w-1/2 md:w-1/3 lg:w-1/4'
                             initial={{ opacity: 0, y: 170 }}
                             whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ 
+                            transition={{
                                 duration: 0.3,
                                 delay: index * 0.1 // This creates the staggered effect
                             }}
