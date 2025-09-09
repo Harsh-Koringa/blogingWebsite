@@ -283,7 +283,7 @@ function Header() {
             }
           }}
         >
-          <PlusCircle className="h-6 w-6 text-white" />
+          <PlusCircle className="h-6 w-6" />
         </motion.button>
       )}
     </>

@@ -14,11 +14,10 @@ function GradientButton({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={`
-                relative overflow-hidden rounded-lg px-6 py-3 font-medium
-                bg-gradient-to-r from-primary to-primary/80
-                text-primary-foreground transition-all
-                hover:shadow-lg hover:shadow-primary/25
-                disabled:opacity-50 disabled:hover:scale-100
+                self-end px-2 py-1 border border-primary text-primary 
+             font-medium rounded-lg hover:bg-primary/10 
+             focus:ring-2 focus:ring-primary/80 focus:outline-none 
+             transition-colors
                 ${className}
             `}
             disabled={loading}

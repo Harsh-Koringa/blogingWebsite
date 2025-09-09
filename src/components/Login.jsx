@@ -65,7 +65,7 @@ function Login() {
                 <form onSubmit={handleSubmit(login)} className="mt-8">
                     <div className="space-y-4">
                         <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                            <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground text-zinc-950" />
                             <Input
                                 type="email"
                                 placeholder="Enter your email"
@@ -80,7 +80,7 @@ function Login() {
                             />
                         </div>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground text-zinc-950" />
                             <Input
                                 type="password"
                                 placeholder="Enter your password"
@@ -90,9 +90,17 @@ function Login() {
                                 })}
                             />
                         </div>
-                        <Button type="submit" className="w-full">
-                            Sign in
-                        </Button>
+                        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                            <Button
+                                type="submit"
+                                className="w-full bg-gray-100 hover:bg-primary/90 dark:bg-gray-500 dark:hover:bg-primary/90 font-semibold text-primary-foreground shadow-lg group relative overflow-hidden backdrop-blur-sm"
+                            >
+                                <motion.span
+                                    className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
+                                />
+                                <span className="relative">Sign in</span>
+                            </Button>
+                        </motion.div>
                     </div>
                 </form>
             </motion.div>

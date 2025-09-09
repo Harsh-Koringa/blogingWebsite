@@ -81,7 +81,10 @@ function Comments({ postId }) {
                         />
                         <button
                             type="submit"
-                            className="self-end px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                            className="self-end px-2 py-1 border border-primary text-primary 
+             font-medium rounded-lg hover:bg-primary/10 
+             focus:ring-2 focus:ring-primary/80 focus:outline-none 
+             transition-colors"
                         >
                             Post Comment
                         </button>
@@ -89,57 +92,67 @@ function Comments({ postId }) {
                 </motion.form>
             ) : (
                 <p className="text-muted-foreground mb-6">Please log in to comment</p>
-            )}
+            )
+            }
 
-            {error && (
-                <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-destructive mb-4"
-                >
-                    {error}
-                </motion.p>
-            )}
+            {
+                error && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-destructive mb-4"
+                    >
+                        {error}
+                    </motion.p>
+                )
+            }
 
-            {loading ? (
-                <p>Loading comments...</p>
-            ) : (
-                <motion.div
-                    className="space-y-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                >
-                    {comments.length === 0 ? (
-                        <p className="text-muted-foreground">No comments yet</p>
-                    ) : (
-                        comments.map((comment) => (
-                            <motion.div
-                                key={comment.$id}
-                                className="p-4 rounded-lg border"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <p className="font-medium">{comment.username}</p>
+            {
+                loading ? (
+                    <p>Loading comments...</p>
+                ) : (
+                    <motion.div
+                        className="space-y-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                    >
+                        {comments.length === 0 ? (
+                            <p className="text-muted-foreground">No comments yet</p>
+                        ) : (
+                            comments.map((comment) => (
+                                <motion.div
+                                    key={comment.$id}
+                                    className="p-4 rounded-lg border"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p className="font-medium">{comment.username}</p>
 
+                                        </div>
+                                        {userData && userData.$id === comment.userId && (
+                                            <button
+                                                onClick={() => appwriteService.deleteComment(comment.$id).then(loadComments)}
+                                                className="self-end px-2 py-1 border border-primary text-primary 
+             font-medium rounded-lg bg-gray-500 shadow-sm
+             hover:bg-primary/10 hover:shadow-md 
+             active:translate-y-[1px] active:shadow-sm
+             focus:ring-2 focus:ring-primary/80 focus:outline-none 
+             transition-all duration-150"
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
                                     </div>
-                                    {userData && userData.$id === comment.userId && (
-                                        <button
-                                            onClick={() => appwriteService.deleteComment(comment.$id).then(loadComments)}
-                                            className="text-sm text-destructive hover:underline"
-                                        >
-                                            Delete
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="text-base">{comment.content}</p>
-                            </motion.div>
-                        ))
-                    )}
-                </motion.div>
-            )}
-        </div>
+                                    <p className="text-base">{comment.content}</p>
+                                </motion.div>
+                            ))
+                        )}
+                    </motion.div>
+                )
+            }
+        </div >
     );
 }
 

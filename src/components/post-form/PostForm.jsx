@@ -197,14 +197,16 @@ function PostForm({ post }) {
                         error={errors.status?.message}
                     />
 
-                    <GradientButton
-                        type="submit"
-                        className="w-full"
-                        loading={loading}
-                        success={success}
-                    >
-                        {post ? "Update Post" : "Create Post"}
-                    </GradientButton>
+                    <div className="flex justify-center">
+                        <GradientButton
+                            type="submit"
+                            className="w-30"
+                            loading={loading}
+                            success={success}
+                        >
+                            {post ? "Update Post" : "Create Post"}
+                        </GradientButton>
+                    </div>
 
                     {lastSaved && (
                         <p className="text-center text-sm text-muted-foreground">

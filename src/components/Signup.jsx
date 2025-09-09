@@ -137,9 +137,17 @@ function Signup() {
                                 required: "Password is required",
                             })}
                         />
-                        <Button type="submit" className="w-full">
-                            Create Account
-                        </Button>
+                        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                            <Button
+                                type="submit"
+                                className="w-full bg-blue-500 hover:bg-primary/90  dark:hover:bg-primary/90 font-semibold text-primary-foreground shadow-lg group relative overflow-hidden backdrop-blur-sm"
+                            >
+                                <motion.span
+                                    className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
+                                />
+                                <span className="relative">Create Account</span>
+                            </Button>
+                        </motion.div>
                     </div>
                 </form>
             </motion.div>
