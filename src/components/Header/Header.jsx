@@ -172,12 +172,6 @@ function Header() {
                             >
                               Profile
                             </button>
-                            <button
-                              onClick={() => handleNavigation('/bookmarks')}
-                              className="w-full text-left px-4 py-2 text-sm rounded-lg hover:bg-glass-bg theme-transition"
-                            >
-                              Bookmarks
-                            </button>
                             <LogoutBtn />
                           </div>
                         </motion.div>

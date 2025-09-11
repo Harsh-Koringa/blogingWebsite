@@ -79,16 +79,31 @@ function PostForm({ post }) {
                 const file = await appwriteService.uploadFile(data.image);
 
                 if (file) {
-                    const fileId = file.$id;
-                    data.featuredImage = fileId;
-                    const dbPost = await appwriteService.createPost({ ...data, userId: userData.$id });
+                    try {
+                        // First get the user's profile to get their ID
+                        const userProfile = await appwriteService.getProfile(userData.user.email);
+                        if (!userProfile) {
+                            throw new Error("User profile not found");
+                        }
 
-                    if (dbPost) {
-                        setSuccess(true);
-                        addToast({ message: "Post created successfully", type: "success" });
-                        setTimeout(() => {
-                            navigate(`/post/${dbPost.$id}`);
-                        }, 1000);
+                        const fileId = file.$id;
+                        data.featuredImage = fileId;
+                        const dbPost = await appwriteService.createPost({
+                            ...data,
+                            userId: userProfile.$id // Use the profile's ID
+                        });
+
+                        if (dbPost) {
+                            setSuccess(true);
+                            addToast({ message: "Post created successfully", type: "success" });
+                            setTimeout(() => {
+                                navigate(`/post/${dbPost.$id}`);
+                            }, 1000);
+                        }
+                    } catch (error) {
+                        console.error("Error creating post:", error);
+                        addToast({ message: error.message || "Failed to create post", type: "error" });
+                        throw error; // Re-throw to be caught by outer catch block
                     }
                 }
             }
@@ -197,16 +212,14 @@ function PostForm({ post }) {
                         error={errors.status?.message}
                     />
 
-                    <div className="flex justify-center">
-                        <GradientButton
-                            type="submit"
-                            className="w-30"
-                            loading={loading}
-                            success={success}
-                        >
-                            {post ? "Update Post" : "Create Post"}
-                        </GradientButton>
-                    </div>
+                    <GradientButton
+                        type="submit"
+                        className="w-full"
+                        loading={loading}
+                        success={success}
+                    >
+                        {post ? "Update Post" : "Create Post"}
+                    </GradientButton>
 
                     {lastSaved && (
                         <p className="text-center text-sm text-muted-foreground">

@@ -15,18 +15,39 @@ function Profile() {
     const { register, handleSubmit, setValue } = useForm();
 
     useEffect(() => {
-        if (userData) {
+        console.log("Profile component userData:", userData);
+        if (userData?.profile) {
+            // If we already have the profile in userData, use it
+            console.log("Using existing profile from userData");
+            setProfile(userData.profile);
+            setValue("username", userData.profile.username);
+            setValue("bio", userData.profile.bio || "");
+            setLoading(false);
+        } else if (userData?.user?.email) {
+            console.log("Starting profile load with email:", userData.user.email);
             loadProfile();
+        } else {
+            console.log("No user data or email available");
+            setLoading(false);
         }
-    }, [userData]);
+    }, [userData, setValue]);
 
     const loadProfile = async () => {
         try {
-            const userProfile = await appwriteService.getProfile(userData.$id);
-            setProfile(userProfile);
-            // Pre-fill form data
-            setValue("username", userProfile.username);
-            setValue("bio", userProfile.bio || "");
+            console.log("Loading profile for email:", userData?.user?.email);
+            const userProfile = await appwriteService.getProfile(userData.user.email);
+            console.log("Received profile:", userProfile);
+
+            if (userProfile) {
+                setProfile(userProfile);
+                // Pre-fill form data
+                setValue("username", userProfile.username);
+                setValue("bio", userProfile.bio || "");
+                console.log("Profile set successfully");
+            } else {
+                console.log("No profile found");
+                setError("Profile not found");
+            }
         } catch (error) {
             console.error("Error loading profile:", error);
             setError("Failed to load profile");
@@ -37,7 +58,10 @@ function Profile() {
 
     const onSubmit = async (data) => {
         try {
-            await appwriteService.updateProfile(userData.$id, {
+            if (!profile || !profile.$id) {
+                throw new Error("Profile not found");
+            }
+            await appwriteService.updateProfile(profile.$id, {
                 username: data.username,
                 bio: data.bio
             });
@@ -140,7 +164,7 @@ function Profile() {
                         <div className="space-y-4">
                             <div>
                                 <h2 className="text-sm font-medium text-muted-foreground">Email</h2>
-                                <p className="text-lg">{userData.email}</p>
+                                <p className="text-lg">{userData.user.email}</p>
                             </div>
                             <div>
                                 <h2 className="text-sm font-medium text-muted-foreground">Username</h2>

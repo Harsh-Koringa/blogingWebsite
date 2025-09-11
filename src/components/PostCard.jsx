@@ -35,35 +35,59 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
     console.log("PostCard props:", { $id, slug, title })
   }, [$id, slug, title]);
 
+  const [userProfile, setUserProfile] = useState(null);
+
+  // Effect to load user profile
   useEffect(() => {
-    // Load like count and user's like status when component mounts
+    const loadUserProfile = async () => {
+      if (userData?.user?.email) {
+        try {
+          const profile = await appwriteService.getProfile(userData.user.email);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+        }
+      }
+    };
+    loadUserProfile();
+  }, [userData?.user?.email]);
+
+  // Effect to load likes and comments
+  useEffect(() => {
     const loadLikes = async () => {
       if ($id) {
-        const likes = await appwriteService.getLikes($id);
-        setLikeCount(likes.length);
+        try {
+          const likes = await appwriteService.getLikes($id);
+          setLikeCount(likes.length);
 
-        if (userData?.$id) {
-          // Check if current user has liked this post
-          const hasLiked = likes.some(like => like.userId === userData.$id);
-          setLiked(hasLiked);
+          if (userProfile) {
+            const hasLiked = likes.some(like => like.userId === userProfile.$id);
+            setLiked(hasLiked);
+          }
+        } catch (error) {
+          console.error('Error loading likes:', error);
         }
       }
     };
 
     const loadCommentCount = async () => {
       if ($id) {
-        const count = await appwriteService.getCommentCount($id);
-        setCommentCount(count);
+        try {
+          const count = await appwriteService.getCommentCount($id);
+          setCommentCount(count);
+        } catch (error) {
+          console.error('Error loading comments:', error);
+        }
       }
     };
 
     loadLikes();
     loadCommentCount();
-  }, [$id, userData]);
+  }, [$id, userProfile]);
 
   const handleLike = async (e) => {
     e.preventDefault();
-    if (!userData?.$id) {
+    if (!userData?.user?.email) {
       // Redirect to login page
       navigate('/login', {
         state: {
@@ -80,18 +104,23 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
         return;
       }
 
-      if (liked) {
-        const result = await appwriteService.unlikePost($id, userData.$id);
-        if (result) {
-          setLikeCount(prev => prev - 1);
-          setLiked(false);
-        }
-      } else {
-        const result = await appwriteService.likePost($id, userData.$id);
-        if (result) {
-          setLikeCount(prev => prev + 1);
-          setLiked(true);
-        }
+      if (!userProfile) {
+        console.error('User profile not found');
+        return;
+      }
+
+      // Optimistically update UI
+      setLiked(!liked);
+      setLikeCount(prev => liked ? prev - 1 : prev + 1);
+
+      const result = liked
+        ? await appwriteService.unlikePost($id, userData.user.email)
+        : await appwriteService.likePost($id, userData.user.email);
+
+      if (!result) {
+        // Revert if operation failed
+        setLiked(liked);
+        setLikeCount(prev => liked ? prev + 1 : prev - 1);
       }
     } catch (error) {
       console.error('Error handling like:', error);
@@ -174,15 +203,15 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
         </div>
 
         <div className="p-6 flex-shrink-0">
-          <h4 className="line-clamp-2 text-xl font-semibold tracking-tight mb-3">
+          <h4 className="h-15 overflow-hidden line-clamp-2 text-xl font-semibold tracking-tight mb-3">
             {title}
           </h4>
           <div className="h-15 overflow-hidden">
-          {content && (
-            <p className="line-clamp-2 text-sm text-muted-foreground mb-4">
-              {content.replace(/<[^>]+>/g, '')}
-            </p>
-          )}
+            {content && (
+              <p className="line-clamp-2 text-sm text-muted-foreground mb-4">
+                {content.replace(/<[^>]+>/g, '')}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -190,12 +219,23 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleLike}
-              className={`glass-card flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-                ${liked ? 'gradient-bg-primary text-red' : ''}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300
+                ${liked
+                  ? 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/50'
+                  : 'glass-card hover:bg-gray-100 dark:hover:bg-gray-800'
+                }
               `}
             >
-              <Heart className={`h-4 w-4 ${liked ? '' : 'text-primary'}`} />
-              <span>{likeCount > 0 ? likeCount : 'Like'}</span>
+              <Heart
+                className={`h-4 w-4 transition-all duration-300 ${liked
+                    ? 'fill-red-500 text-red-500'
+                    : 'text-primary'
+                  }`}
+              />
+              <span className={`${liked ? 'text-red-600 dark:text-red-400' : ''
+                }`}>
+                {likeCount > 0 ? likeCount : 'Like'}
+              </span>
             </motion.button>
 
             <motion.button

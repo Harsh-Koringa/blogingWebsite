@@ -42,6 +42,49 @@ export class Service {
         }
     }
 
+    async getProfile(email) {
+        try {
+            console.log("Getting profile for email:", email);
+            console.log("Using database:", conf.appwriteDatabaseId);
+            console.log("Using collection:", conf.appwriteProfilesCollection);
+
+            const response = await this.databases.listDocuments(
+                conf.appwriteDatabaseId,
+                conf.appwriteProfilesCollection,
+                [
+                    Query.equal('email', email)
+                ]
+            );
+
+            console.log("Appwrite response:", response);
+
+            if (response && response.documents && response.documents.length > 0) {
+                console.log("Found profile:", response.documents[0]);
+                return response.documents[0];
+            }
+            console.log("No profile found for email:", email);
+            return null;
+        } catch (error) {
+            console.log("Service :: getProfile :: error", error);
+            throw error;
+        }
+    } async updateProfile(profileId, { username, bio }) {
+        try {
+            return await this.databases.updateDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteProfilesCollection,
+                profileId,
+                {
+                    username,
+                    bio
+                }
+            );
+        } catch (error) {
+            console.log("Service :: updateProfile :: error", error);
+            throw error;
+        }
+    }
+
     // Your updated timestamp slug generator
     // async generateTimestampSlug(title) {
     //     const baseSlug = this.slugify(title);
@@ -88,8 +131,20 @@ export class Service {
     // Updated createPost method
     async createPost({ title, content, featuredImage, status, userId }) {
         try {
+            if (!userId) {
+                throw new Error("userId is required");
+            }
+
             // Generate unique slug from title
             const slug = await this.generateTimestampSlug(title);
+
+            console.log("Creating post with data:", {
+                title,
+                content: content.substring(0, 50) + "...", // Log truncated content
+                featuredImage,
+                status,
+                userId
+            });
 
             return await this.databases.createDocument(
                 conf.appwriteDatabaseId,
@@ -100,8 +155,7 @@ export class Service {
                     content,
                     featuredImage,
                     status,
-                    userId,
-                    //createdAt: new Date().toISOString()
+                    userId
                 }
             );
         } catch (error) {
@@ -269,20 +323,29 @@ export class Service {
     // }
 
 
-    async likePost(postId, userId) {
+    async likePost(postId, userEmail) {
         try {
-            if (!postId || !userId) {
+            if (!postId || !userEmail) {
                 console.log("Service :: likePost :: Missing required parameters");
                 return false;
             }
 
-            // Create shorter ID using first 8 chars of userId + last 8 chars of postId
-            const shortUserId = userId.substring(0, 8);
+            // First get the user's profile to get their ID
+            const userProfile = await this.getProfile(userEmail);
+            if (!userProfile) {
+                console.log("Service :: likePost :: User profile not found");
+                return false;
+            }
+
+            const profileId = userProfile.$id;
+
+            // Create shorter ID using first 8 chars of profileId + last 8 chars of postId
+            const shortUserId = profileId.substring(0, 8);
             const shortPostId = postId.slice(-8);
             const likeId = `${shortUserId}_${shortPostId}`;
 
             const data = {
-                userId,
+                userId: profileId, // Use the profile's ID
                 postId,
                 createdAt: new Date().toISOString()
             };
@@ -303,15 +366,24 @@ export class Service {
         }
     }
 
-    async unlikePost(postId, userId) {
+    async unlikePost(postId, userEmail) {
         try {
-            if (!postId || !userId) {
+            if (!postId || !userEmail) {
                 console.log("Service :: unlikePost :: Missing required parameters");
                 return false;
             }
 
+            // First get the user's profile to get their ID
+            const userProfile = await this.getProfile(userEmail);
+            if (!userProfile) {
+                console.log("Service :: unlikePost :: User profile not found");
+                return false;
+            }
+
+            const profileId = userProfile.$id;
+
             // Use same pattern as likePost
-            const shortUserId = userId.substring(0, 8);
+            const shortUserId = profileId.substring(0, 8);
             const shortPostId = postId.slice(-8);
             const likeId = `${shortUserId}_${shortPostId}`;
 
@@ -397,15 +469,38 @@ export class Service {
         }
     }
 
-    async getProfile(userId) {
+    async getProfile(email) {
+        try {
+            console.log("Getting profile for email:", email);
+            const response = await this.databases.listDocuments(
+                conf.appwriteDatabaseId,
+                conf.appwriteProfilesCollection,
+                [
+                    Query.equal('email', email)
+                ]
+            );
+
+            if (response && response.documents && response.documents.length > 0) {
+                return response.documents[0];
+            }
+            console.log("No profile found for email:", email);
+            return null;
+        } catch (error) {
+            console.log("Service :: getProfile :: error", error);
+            return null;
+        }
+    }
+
+    // Get profile by ID (for internal use)
+    async getProfileById(profileId) {
         try {
             return await this.databases.getDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteProfilesCollection,
-                userId
+                profileId
             );
         } catch (error) {
-            console.log("Service :: getProfile :: error", error);
+            console.log("Service :: getProfileById :: error", error);
             return null;
         }
     }
@@ -442,9 +537,9 @@ export class Service {
         }
     }
 
-    async createComment(postId, userId, content) {
+    async createComment(postId, userEmail, content) {
         try {
-            const userProfile = await this.getProfile(userId);
+            const userProfile = await this.getProfile(userEmail);
             if (!userProfile) throw new Error("User profile not found");
 
             return await this.databases.createDocument(
@@ -453,11 +548,10 @@ export class Service {
                 ID.unique(),
                 {
                     postId,
-                    userId,
+                    userId: userProfile.$id, // Use the profile's ID
                     content,
                     username: userProfile.username,
-                    //createdAt: new Date().toISOString(),
-                    //updatedAt: new Date().toISOString()
+
                 }
             );
         } catch (error) {

@@ -33,13 +33,13 @@ function Comments({ postId }) {
     }, [postId]);
 
     const onSubmit = async (data) => {
-        if (!userData) {
+        if (!userData || !userData.user || !userData.user.email) {
             setError("Please log in to comment");
             return;
         }
 
         try {
-            await appwriteService.createComment(postId, userData.$id, data.comment);
+            await appwriteService.createComment(postId, userData.user.email, data.comment);
             reset(); // Clear form
             await loadComments(); // Reload comments
         } catch (error) {

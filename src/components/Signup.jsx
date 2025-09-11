@@ -1,27 +1,32 @@
-import React, { useState } from 'react'
-import authService from '../appwrite/auth'
+import React, { useState, useEffect } from 'react'
+import authService from '../appwrite/auth.jsx'
 import appwriteService from '../appwrite/config'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { login } from '../store/authSlice'
 import { Button, Input, Logo } from './index.js'
 import { useDispatch } from 'react-redux'
 import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
+import { Lock } from 'lucide-react'
 
 function Signup() {
     const navigate = useNavigate()
+    const location = useLocation()
     const [error, setError] = useState("")
+    const [step, setStep] = useState("form") // "form", "otp"
+    const [signupData, setSignupData] = useState(null)
     const dispatch = useDispatch()
-    const { register, handleSubmit } = useForm()
+    const { register, handleSubmit, setValue, formState: { isSubmitting } } = useForm()
 
-    const create = async (data) => {
-        setError("");
-
-        // Validate password
-        if (data.password.length < 8) {
-            setError("Password must be at least 8 characters long");
-            return;
+    // Pre-fill email if redirected from login
+    useEffect(() => {
+        if (location.state?.email) {
+            setValue("email", location.state.email);
         }
+    }, [location.state, setValue])
+
+    const requestSignup = async (data) => {
+        setError("");
 
         // Validate username
         if (data.username.length < 3) {
@@ -30,38 +35,55 @@ function Signup() {
         }
 
         try {
-            // First try to create the account
-            const userData = await authService.createAccount(data.email, data.password, data.name);
+            // This will send OTP
+            const result = await authService.createAccount(
+                data.email,
+                data.username,
+                data.name
+            );
 
-            if (userData) {
-                const currentUser = await authService.getCurrentUser();
-                if (currentUser) {
-                    try {
-                        // Then create the profile
-                        await appwriteService.createProfile(
-                            currentUser.$id,
-                            data.username || data.name
-                        );
-                        dispatch(login({ userData: currentUser }));
-                        navigate("/");
-                    } catch (profileError) {
-                        console.error("Error creating profile:", profileError);
-                        setError("Error creating user profile. Please try again.");
-                        // Clean up by logging out if profile creation fails
-                        await authService.logout();
-                    }
-                }
-            }
+            setSignupData(result);
+            setStep("otp");
         } catch (error) {
             console.error("Signup error:", error);
-            // Handle specific error messages
-            if (error.message.includes("email already exists")) {
-                setError("This email is already registered. Please try logging in instead.");
-            } else if (error.message.includes("logout before creating")) {
+            if (error.message.includes("logout before creating")) {
                 setError("You are already logged in. Please log out first.");
+            } else if (error.message.includes("account with this email already exists")) {
+                // Add a small delay before redirecting to make sure the error message is seen
+                setError("Account already exists. Redirecting to login...");
+                setTimeout(() => {
+                    navigate("/login", {
+                        state: { email: data.email } // Pass email to login form
+                    });
+                }, 2000);
             } else {
-                setError(error.message || "Failed to create account. Please try again.");
+                setError(error.message || "Failed to start signup process. Please try again.");
             }
+        }
+    }
+
+    const verifyAndComplete = async (data) => {
+        try {
+            const userData = await authService.completeSignup(
+                signupData.email,
+                signupData.username,
+                signupData.name,
+                data.otp
+            );
+
+            if (userData) {
+                // Update Redux store
+                dispatch(login({ userData }));
+                // Ensure localStorage has the auth token (should be set by completeSignup, but double-check)
+                if (!localStorage.getItem('auth_token')) {
+                    const token = userData.token
+                    if (token) localStorage.setItem('auth_token', token)
+                }
+                navigate("/");
+            }
+        } catch (error) {
+            console.error("Verification error:", error);
+            setError(error.message || "Failed to verify OTP. Please try again.");
         }
     }
 
@@ -97,59 +119,123 @@ function Signup() {
                     </motion.p>
                 )}
 
-                <form onSubmit={handleSubmit(create)} className="mt-8">
-                    <div className="space-y-4">
-                        <Input
-                            label="Username"
-                            placeholder="Choose a username"
-                            {...register("username", {
-                                required: "Username is required",
-                                minLength: {
-                                    value: 3,
-                                    message: "Username must be at least 3 characters"
-                                }
-                            })}
-                        />
-                        <Input
-                            label="Full Name"
-                            placeholder="Enter your full name"
-                            {...register("name", {
-                                required: "Name is required",
-                            })}
-                        />
-                        <Input
-                            label="Email"
-                            placeholder="Enter your email"
-                            type="email"
-                            {...register("email", {
-                                required: "Email is required",
-                                validate: {
-                                    matchPattern: (value) => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(value) ||
-                                        "Email address must be a valid address",
-                                }
-                            })}
-                        />
-                        <Input
-                            label="Password"
-                            type="password"
-                            placeholder="Enter your password"
-                            {...register("password", {
-                                required: "Password is required",
-                            })}
-                        />
-                        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                            <Button
-                                type="submit"
-                                className="w-full bg-blue-500 hover:bg-primary/90  dark:hover:bg-primary/90 font-semibold text-primary-foreground shadow-lg group relative overflow-hidden backdrop-blur-sm"
-                            >
-                                <motion.span
-                                    className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
+                {step === "form" ? (
+                    <form onSubmit={handleSubmit(requestSignup)} className="mt-8">
+                        <div className="space-y-4">
+                            <Input
+                                label="Username"
+                                placeholder="Choose a username"
+                                {...register("username", {
+                                    required: "Username is required",
+                                    minLength: {
+                                        value: 3,
+                                        message: "Username must be at least 3 characters"
+                                    }
+                                })}
+                            />
+                            <Input
+                                label="Full Name"
+                                placeholder="Enter your full name"
+                                {...register("name", {
+                                    required: "Name is required",
+                                })}
+                            />
+                            <Input
+                                label="Email"
+                                placeholder="Enter your email"
+                                type="email"
+                                {...register("email", {
+                                    required: "Email is required",
+                                    validate: {
+                                        matchPattern: (value) => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(value) ||
+                                            "Email address must be a valid address",
+                                    }
+                                })}
+                            />
+                            <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 font-semibold text-primary-foreground shadow-lg group relative overflow-hidden backdrop-blur-sm"
+                                >
+                                    <motion.span
+                                        className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
+                                    />
+                                    <span className="relative">
+                                        {isSubmitting ? 'Sending OTP...' : 'Continue with Email'}
+                                    </span>
+                                </Button>
+                            </motion.div>
+                        </div>
+                    </form>
+                ) : (
+                    <form onSubmit={handleSubmit(verifyAndComplete)} className="mt-8">
+                        <div className="space-y-4">
+                            <div className="text-center text-sm text-muted-foreground mb-4">
+                                We've sent a verification code to<br />
+                                <span className="font-medium text-foreground">{signupData?.email}</span>
+                            </div>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    type="text"
+                                    placeholder="Enter OTP"
+                                    className="pl-10"
+                                    {...register("otp", {
+                                        required: "OTP is required",
+                                        pattern: {
+                                            value: /^\d{6}$/,
+                                            message: "Please enter a valid 6-digit OTP"
+                                        }
+                                    })}
                                 />
-                                <span className="relative">Create Account</span>
-                            </Button>
-                        </motion.div>
-                    </div>
-                </form>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setStep("form");
+                                        setError("");
+                                        setSignupData(null);
+                                    }}
+                                    className="text-primary hover:underline"
+                                >
+                                    Change email
+                                </button>
+                                <span className="mx-2">•</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (signupData) {
+                                            requestSignup({
+                                                email: signupData.email,
+                                                username: signupData.username,
+                                                name: signupData.name
+                                            });
+                                        }
+                                    }}
+                                    className="text-primary hover:underline"
+                                >
+                                    Resend OTP
+                                </button>
+                            </div>
+                            <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 font-semibold text-primary-foreground shadow-lg group relative overflow-hidden backdrop-blur-sm"
+                                >
+                                    <motion.span
+                                        className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
+                                    />
+                                    <span className="relative">
+                                        {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                                    </span>
+                                </Button>
+                            </motion.div>
+                        </div>
+                    </form>
+                )}
             </motion.div>
         </div>
     )
