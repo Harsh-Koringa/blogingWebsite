@@ -8,6 +8,14 @@ export class AuthService {
     baseUrl = conf.apiUrl;
 
     constructor() {
+        console.log('Initializing AuthService with config:', {
+            appwriteUrl: conf.appwriteUrl,
+            projectId: conf.appwriteProjectId,
+            databaseId: conf.appwriteDatabaseId,
+            profilesCollection: conf.appwriteProfilesCollection
+        });
+
+        // Initialize the client
         this.client
             .setEndpoint(conf.appwriteUrl)
             .setProject(conf.appwriteProjectId);
@@ -18,34 +26,74 @@ export class AuthService {
     // Check if user exists and return profile if found
     async checkUserExists(email) {
         try {
+            console.log('Checking user with config:', {
+                databaseId: conf.appwriteDatabaseId,
+                profilesCollection: conf.appwriteProfilesCollection,
+                email: email
+            });
+
+            if (!conf.appwriteDatabaseId || !conf.appwriteProfilesCollection) {
+                throw new Error('Database or collection ID is missing');
+            }
+
             const result = await this.databases.listDocuments(
                 conf.appwriteDatabaseId,
                 conf.appwriteProfilesCollection,
                 [
                     // Using a Query to find user by email
-                    //@ts-ignore
                     Query.equal('email', email)
                 ]
             );
+            console.log('Query result:', result);
+
             if (result.total > 0) {
                 return { exists: true, profile: result.documents[0] };
             }
             return { exists: false, profile: null };
         } catch (error) {
             console.error('Error checking user existence:', error);
-            return { exists: false, profile: null };
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                config: {
+                    appwriteUrl: conf.appwriteUrl,
+                    databaseId: conf.appwriteDatabaseId,
+                    profilesCollection: conf.appwriteProfilesCollection
+                }
+            });
+            throw error; // Re-throw to handle in sendOTP
         }
     }
 
     // Send OTP for login or signup
     async sendOTP(email, isSignup = false) {
         try {
+            console.log('Sending OTP with config:', {
+                baseUrl: this.baseUrl,
+                isSignup: isSignup,
+                email: email
+            });
+
             // Only check if user exists during login
-            const { exists } = await this.checkUserExists(email);
-            if (!isSignup && !exists) {
-                throw new Error("No account found with this email. Please sign up first.");
-            } else if (isSignup && exists) {
-                throw new Error("An account with this email already exists. Please log in instead.");
+            try {
+                const { exists } = await this.checkUserExists(email);
+                console.log('User exists check result:', exists);
+
+                if (!isSignup && !exists) {
+                    throw new Error("No account found with this email. Please sign up first.");
+                } else if (isSignup && exists) {
+                    throw new Error("An account with this email already exists. Please log in instead.");
+                }
+            } catch (error) {
+                if (error.message === 'Database or collection ID is missing') {
+                    throw error;
+                }
+                // If there's an error checking user existence, log it but continue for signup
+                if (isSignup) {
+                    console.warn('Error checking user existence during signup:', error);
+                } else {
+                    throw error;
+                }
             }
 
             const response = await fetch(`${this.baseUrl}/auth/send-otp`, {
