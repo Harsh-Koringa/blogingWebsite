@@ -1,4 +1,5 @@
 const conf = {
+    apiUrl: String(import.meta.env.VITE_API_URL || 'http://localhost:5000/api'),
     appwriteUrl: String(import.meta.env.VITE_APPWRITE_URL),
     appwriteProjectId: String(import.meta.env.VITE_APPWRITE_PROJECT_ID),
     appwriteDatabaseId: String(import.meta.env.VITE_APPWRITE_DATABASE_ID),

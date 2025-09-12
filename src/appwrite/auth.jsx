@@ -5,7 +5,7 @@ export class AuthService {
     client = new Client();
     account;
     databases;
-    baseUrl = 'http://localhost:5000/api';
+    baseUrl = conf.apiUrl;
 
     constructor() {
         this.client
@@ -240,10 +240,10 @@ export class AuthService {
         try {
             // Clear token
             localStorage.removeItem('auth_token');
-            
+
             // Clear any session data if needed
             // You might want to add any other cleanup here
-            
+
             // Call backend logout endpoint if needed
             try {
                 await fetch(`${this.baseUrl}/auth/logout`, {
