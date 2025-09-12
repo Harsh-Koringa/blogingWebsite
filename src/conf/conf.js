@@ -8,7 +8,7 @@ console.log('Environment Variables:', {
 });
 
 const conf = {
-    apiUrl: "http://localhost:5000/api",
+    apiUrl: "https://bloging-website2.vercel.app/api",
     appwriteUrl: "https://cloud.appwrite.io/v1",
     appwriteProjectId: "67ded1b9002fa28a53a6",
     appwriteDatabaseId: "67ded346002f37ba676e",
