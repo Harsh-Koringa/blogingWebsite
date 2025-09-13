@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 
 // Email transporter
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     service: process.env.EMAIL_SERVICE || 'gmail',
     host: "smtp.gmail.com",
     port: 587,
