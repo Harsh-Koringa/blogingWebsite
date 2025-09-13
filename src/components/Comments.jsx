@@ -8,8 +8,10 @@ import { useForm } from 'react-hook-form';
 function Comments({ postId }) {
     const commentsRef = useRef(null);
     const location = useLocation();
-    const [comments, setComments] = useState([]);
+    const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [comments, setComments] = useState([]);
+    const { setValue } = useForm();
     const [error, setError] = useState("");
     const userData = useSelector((state) => state.auth.userData);
     const { register, handleSubmit, reset } = useForm();
@@ -33,13 +35,13 @@ function Comments({ postId }) {
     }, [postId]);
 
     const onSubmit = async (data) => {
-        if (!userData || !userData.user || !userData.user.email) {
+        if (!userData.email) {
             setError("Please log in to comment");
             return;
         }
 
         try {
-            await appwriteService.createComment(postId, userData.user.email, data.comment);
+            await appwriteService.createComment(postId, userData.email, data.comment);
             reset(); // Clear form
             await loadComments(); // Reload comments
         } catch (error) {
@@ -54,6 +56,24 @@ function Comments({ postId }) {
             commentsRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [location.state?.scrollToComments]);
+
+    useEffect(() => {
+        console.log("Profile component userData:", userData);
+        if (userData?.profile) {
+            // If we already have the profile in userData, use it
+            console.log("Using existing profile from userData");
+            setProfile(userData.profile);
+            setValue("username", userData.profile.username);
+            setValue("bio", userData.profile.bio || "");
+            setLoading(false);
+        } else if (userData?.user?.email) {
+            console.log("Starting profile load with email:", userData.user.email);
+            loadProfile();
+        } else {
+            console.log("No user data or email available");
+            setLoading(false);
+        }
+    }, [userData, setValue]);
 
     return (
         <div ref={commentsRef} className="my-8 scroll-mt-16">

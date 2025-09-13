@@ -1,3 +1,4 @@
+// authService.js
 import conf from '../conf/conf.js';
 import { Client, Account, ID, Databases, Query } from "appwrite";
 
@@ -40,7 +41,6 @@ export class AuthService {
                 conf.appwriteDatabaseId,
                 conf.appwriteProfilesCollection,
                 [
-                    // Using a Query to find user by email
                     Query.equal('email', email)
                 ]
             );
@@ -52,16 +52,7 @@ export class AuthService {
             return { exists: false, profile: null };
         } catch (error) {
             console.error('Error checking user existence:', error);
-            console.error('Error details:', {
-                message: error.message,
-                stack: error.stack,
-                config: {
-                    appwriteUrl: conf.appwriteUrl,
-                    databaseId: conf.appwriteDatabaseId,
-                    profilesCollection: conf.appwriteProfilesCollection
-                }
-            });
-            throw error; // Re-throw to handle in sendOTP
+            throw error;
         }
     }
 
@@ -74,7 +65,7 @@ export class AuthService {
                 email: email
             });
 
-            // Only check if user exists during login
+            // Check if user exists during login/signup
             try {
                 const { exists } = await this.checkUserExists(email);
                 console.log('User exists check result:', exists);
@@ -96,12 +87,14 @@ export class AuthService {
                 }
             }
 
-            const response = await fetch(`${this.baseUrl}/auth/send-otp`, {
+            const response = await fetch(`${this.baseUrl}/api/auth/send-otp`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ email }),
+                credentials: 'include',
+                body: JSON.stringify({ email, isSignup }),
             });
 
             if (!response.ok) {
@@ -109,7 +102,15 @@ export class AuthService {
                 throw new Error(error.error || 'Failed to send OTP');
             }
 
-            return await response.json();
+            const data = await response.json();
+            
+            // Store the OTP token for verification
+            if (data.otpToken) {
+                localStorage.setItem('otpToken', data.otpToken);
+                console.log('OTP token stored successfully');
+            }
+
+            return data;
         } catch (error) {
             console.error('Error sending OTP:', error);
             throw error;
@@ -119,12 +120,19 @@ export class AuthService {
     // Verify OTP
     async verifyOTP(email, otp) {
         try {
-            const response = await fetch(`${this.baseUrl}/auth/verify-otp`, {
+            // Get the stored OTP token
+            const otpToken = localStorage.getItem('otpToken');
+            
+            if (!otpToken) {
+                throw new Error('No OTP token found. Please request a new OTP.');
+            }
+
+            const response = await fetch(`${this.baseUrl}/api/auth/verify-otp`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, otp }),
+                body: JSON.stringify({ email, otp, otpToken }),
             });
 
             if (!response.ok) {
@@ -133,14 +141,18 @@ export class AuthService {
             }
 
             const data = await response.json();
+            
             if (data.token) {
+                // Clear the OTP token after successful verification
+                localStorage.removeItem('otpToken');
+                
+                // Store the auth token
                 localStorage.setItem('auth_token', data.token);
 
                 try {
-                    // Get existing profile
+                    // Get existing profile and update lastLogin
                     const { exists, profile } = await this.checkUserExists(email);
                     if (exists && profile) {
-                        // Update lastLogin time
                         await this.databases.updateDocument(
                             conf.appwriteDatabaseId,
                             conf.appwriteProfilesCollection,
@@ -167,15 +179,19 @@ export class AuthService {
     // Create new account with OTP verification
     async createAccount(email, username, name) {
         try {
-            // First check if email exists
+            // First check if already logged in
             const token = localStorage.getItem('auth_token');
             if (token) {
                 throw new Error("Please logout before creating a new account");
             }
 
             // Send OTP first, with isSignup flag
-            await this.sendOTP(email, true);
-            return { email, username, name };
+            const result = await this.sendOTP(email, true);
+            
+            // Store signup data temporarily for completeSignup
+            localStorage.setItem('signupData', JSON.stringify({ email, username, name }));
+            
+            return { email, username, name, ...result };
         } catch (error) {
             console.error("Error in createAccount:", error);
             throw error;
@@ -187,12 +203,19 @@ export class AuthService {
         try {
             console.log('Starting signup process for:', email);
 
-            const response = await fetch(`${this.baseUrl}/auth/complete-signup`, {
+            // Get the stored OTP token
+            const otpToken = localStorage.getItem('otpToken');
+            
+            if (!otpToken) {
+                throw new Error('No OTP token found. Please request a new OTP.');
+            }
+
+            const response = await fetch(`${this.baseUrl}/api/auth/complete-signup`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, username, name, otp }),
+                body: JSON.stringify({ email, username, name, otp, otpToken }),
             });
 
             if (!response.ok) {
@@ -204,6 +227,10 @@ export class AuthService {
             console.log('Backend signup response:', data);
 
             if (data.token && data.user) {
+                // Clear OTP token and signup data
+                localStorage.removeItem('otpToken');
+                localStorage.removeItem('signupData');
+
                 console.log('Creating Appwrite profile with config:', {
                     databaseId: conf.appwriteDatabaseId,
                     collectionId: conf.appwriteProfilesCollection,
@@ -217,27 +244,26 @@ export class AuthService {
                         name: data.user.name
                     });
 
-                    const documentId = ID.unique(); // Generate ID first
+                    const documentId = ID.unique();
                     const profile = await this.databases.createDocument(
                         conf.appwriteDatabaseId,
                         conf.appwriteProfilesCollection,
                         documentId,
                         {
-                            userId: documentId, // Use the same ID as the document ID
+                            userId: documentId,
                             email: data.user.email,
                             username: data.user.username,
                             name: data.user.name,
+                            createdAt: data.user.createdAt,
+                            lastLogin: new Date().toISOString()
                         }
                     );
                     console.log('Successfully created Appwrite profile:', profile);
                 } catch (error) {
                     console.error('Failed to create Appwrite profile:', error);
-                    // Don't just log the error, throw it to handle it properly
-                    throw error;
+                    // Don't throw here - user is created successfully, profile can be created later
                 }
-            }
 
-            if (data.token) {
                 localStorage.setItem('auth_token', data.token);
                 return data.user;
             }
@@ -253,7 +279,7 @@ export class AuthService {
             const token = localStorage.getItem('auth_token');
             if (!token) return null;
 
-            const response = await fetch(`${this.baseUrl}/user/profile`, {
+            const response = await fetch(`${this.baseUrl}/api/user/profile`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -270,10 +296,14 @@ export class AuthService {
             const userData = await response.json();
 
             // Get the Appwrite profile
-            const { exists, profile } = await this.checkUserExists(userData.user.email);
-            if (exists && profile) {
-                // Merge the profile data with user data
-                userData.profile = profile;
+            try {
+                const { exists, profile } = await this.checkUserExists(userData.email);
+                if (exists && profile) {
+                    // Merge the profile data with user data
+                    userData.profile = profile;
+                }
+            } catch (error) {
+                console.error('Error getting user profile from Appwrite:', error);
             }
 
             console.log('Current user data with profile:', userData);
@@ -286,23 +316,22 @@ export class AuthService {
 
     async logout() {
         try {
-            // Clear token
+            // Clear all tokens and data
             localStorage.removeItem('auth_token');
+            localStorage.removeItem('otpToken');
+            localStorage.removeItem('signupData');
 
-            // Clear any session data if needed
-            // You might want to add any other cleanup here
-
-            // Call backend logout endpoint if needed
+            // Call backend logout endpoint if it exists
             try {
-                await fetch(`${this.baseUrl}/auth/logout`, {
+                const token = localStorage.getItem('auth_token');
+                await fetch(`${this.baseUrl}/api/auth/logout`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'Authorization': `Bearer ${token}`,
                     },
                 });
             } catch (e) {
-                console.log('Backend logout error:', e);
-                // Continue even if backend logout fails
+                console.log('Backend logout error (ignored):', e);
             }
 
             return true;
@@ -314,5 +343,4 @@ export class AuthService {
 }
 
 const authService = new AuthService();
-
 export default authService;

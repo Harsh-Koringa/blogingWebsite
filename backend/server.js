@@ -9,19 +9,39 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
 app.use(express.json());
 
 // In-memory storage for OTPs (in production, use Redis or a database)
 const otpStore = new Map();
 
+// Verify email configuration
+const verifyEmailConfig = async () => {
+    try {
+        console.log('Verifying email configuration...');
+        await transporter.verify();
+        console.log('Email configuration is valid and ready to send OTPs');
+    } catch (error) {
+        console.error('Email configuration error:', error);
+        // Don't throw the error, just log it
+    }
+};
+
 // Email transporter
 const transporter = nodemailer.createTransport({
     service: process.env.EMAIL_SERVICE,
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
+        pass: process.env.EMAIL_PASS.trim() // Trim to remove any accidental spaces
+    },
+    debug: true // Enable debug logs
 });
 
 // Generate OTP
@@ -50,63 +70,82 @@ const sendOTPEmail = async (email, otp) => {
 };
 
 // Routes
+// In your server.js, replace the send-otp route:
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
-        const { email } = req.body;
-        const otp = generateOTP();
+        const { email, isSignup } = req.body;
 
-        // Store OTP with timestamp
-        otpStore.set(email, {
-            otp: await bcrypt.hash(otp, 10),
-            timestamp: Date.now(),
-            attempts: 0
-        });
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+
+        console.log('Sending OTP to:', email, 'isSignup:', isSignup);
+
+        const otp = generateOTP();
+        console.log('Generated OTP (for testing):', otp);
+
+        // ✅ CREATE JWT TOKEN WITH OTP (instead of storing in Map)
+        const otpToken = jwt.sign(
+            { 
+                email: email,
+                otp: otp,
+                isSignup: isSignup || false,
+                attempts: 0,
+                timestamp: Date.now()
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '5m' }
+        );
 
         // Send OTP
         await sendOTPEmail(email, otp);
+        console.log('OTP email sent successfully');
 
-        res.json({ message: 'OTP sent successfully' });
+        // ✅ RETURN THE TOKEN (not just message)
+        res.json({ 
+            message: 'OTP sent successfully',
+            otpToken: otpToken  // ← Add this line
+        });
     } catch (error) {
         console.error('Error sending OTP:', error);
-        res.status(500).json({ error: 'Failed to send OTP' });
+        res.status(500).json({
+            error: 'Failed to send OTP',
+            details: error.message
+        });
     }
 });
 
+
 app.post('/api/auth/verify-otp', async (req, res) => {
     try {
-        const { email, otp } = req.body;
-        const storedData = otpStore.get(email);
+        const { email, otp, otpToken } = req.body; // ← Add otpToken
 
-        if (!storedData) {
-            return res.status(400).json({ error: 'OTP expired or not sent' });
+        if (!otpToken) {
+            return res.status(400).json({ error: 'OTP token is required' });
         }
 
-        // Check if OTP is expired (5 minutes)
-        if (Date.now() - storedData.timestamp > 5 * 60 * 1000) {
-            otpStore.delete(email);
-            return res.status(400).json({ error: 'OTP expired' });
+        // ✅ VERIFY JWT TOKEN (instead of checking Map)
+        let payload;
+        try {
+            payload = jwt.verify(otpToken, process.env.JWT_SECRET);
+        } catch (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(400).json({ error: 'OTP expired' });
+            }
+            return res.status(400).json({ error: 'Invalid token' });
         }
 
-        // Check attempts
-        if (storedData.attempts >= 3) {
-            otpStore.delete(email);
-            return res.status(400).json({ error: 'Too many attempts. Please request a new OTP' });
+        // Check email match
+        if (payload.email !== email) {
+            return res.status(400).json({ error: 'Email mismatch' });
         }
-
-        // Increment attempts
-        storedData.attempts += 1;
-        otpStore.set(email, storedData);
 
         // Verify OTP
-        const isValid = await bcrypt.compare(otp, storedData.otp);
-        if (!isValid) {
+        if (payload.otp !== otp) {
             return res.status(400).json({ error: 'Invalid OTP' });
         }
 
-        // Clear OTP after successful verification
-        otpStore.delete(email);
-
-        // Generate JWT token
+        // Generate auth token
         const token = jwt.sign(
             { email },
             process.env.JWT_SECRET,
@@ -120,30 +159,42 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     }
 });
 
+
 // Complete signup endpoint
+// Complete signup endpoint - UPDATED for JWT-based approach
 app.post('/api/auth/complete-signup', async (req, res) => {
     try {
-        const { email, username, name, otp } = req.body;
-        const storedData = otpStore.get(email);
+        const { email, username, name, otp, otpToken } = req.body; // ← Add otpToken
 
-        if (!storedData) {
-            return res.status(400).json({ error: 'OTP expired or not sent' });
+        if (!otpToken) {
+            return res.status(400).json({ error: 'OTP token is required' });
         }
 
-        // Check if OTP is expired (5 minutes)
-        if (Date.now() - storedData.timestamp > 5 * 60 * 1000) {
-            otpStore.delete(email);
-            return res.status(400).json({ error: 'OTP expired' });
+        // ✅ VERIFY JWT TOKEN (instead of checking Map)
+        let payload;
+        try {
+            payload = jwt.verify(otpToken, process.env.JWT_SECRET);
+        } catch (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(400).json({ error: 'OTP expired' });
+            }
+            return res.status(400).json({ error: 'Invalid token' });
+        }
+
+        // Check if email matches
+        if (payload.email !== email) {
+            return res.status(400).json({ error: 'Email mismatch' });
         }
 
         // Verify OTP
-        const isValid = await bcrypt.compare(otp, storedData.otp);
-        if (!isValid) {
+        if (payload.otp !== otp) {
             return res.status(400).json({ error: 'Invalid OTP' });
         }
 
-        // Clear OTP after successful verification
-        otpStore.delete(email);
+        // Check if this was a signup request
+        if (!payload.isSignup) {
+            return res.status(400).json({ error: 'This OTP was not generated for signup' });
+        }
 
         // Create user object (in production, save to database)
         const user = {
@@ -163,10 +214,11 @@ app.post('/api/auth/complete-signup', async (req, res) => {
 
         res.json({ token, user });
     } catch (error) {
-        console.error('Error verifying OTP:', error);
-        res.status(500).json({ error: 'Failed to verify OTP' });
+        console.error('Error completing signup:', error);
+        res.status(500).json({ error: 'Failed to complete signup' });
     }
 });
+
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
@@ -186,12 +238,23 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// Protected route example
-app.get('/api/user/profile', authenticateToken, (req, res) => {
-    res.json({ user: req.user });
+// Get user profile
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+    try {
+        // Return full user info from JWT payload
+        res.json({
+            id: req.user.userId,
+            email: req.user.email,
+            // Add any other user info you want to expose
+        });
+    } catch (error) {
+        console.error('Error getting user profile:', error);
+        res.status(500).json({ error: 'Failed to get user profile' });
+    }
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    verifyEmailConfig();
 });

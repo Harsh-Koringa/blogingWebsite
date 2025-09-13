@@ -1,0 +1,7 @@
+{
+  "name": "api",
+  "dependencies": {
+    "nodemailer": "^6.9.9",
+    "cors": "^2.8.5"
+  }
+}

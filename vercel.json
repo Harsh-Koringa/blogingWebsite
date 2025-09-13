@@ -17,5 +17,12 @@
       "memory": 1024,
       "maxDuration": 10
     }
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "EMAIL_SERVICE": "@email_service",
+    "EMAIL_USER": "@email_user",
+    "EMAIL_PASS": "@email_pass",
+    "FRONTEND_URL": "@frontend_url"
   }
 }

@@ -21,6 +21,8 @@ function PostForm({ post }) {
         },
     });
 
+    
+    const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [previewMode, setPreviewMode] = useState(false);
@@ -28,6 +30,25 @@ function PostForm({ post }) {
     const navigate = useNavigate();
     const userData = useSelector((state) => state.auth.userData);
     const { addToast, toasts, removeToast } = useToast();
+
+    useEffect(() => {
+        console.log("Profile component userData:", userData);
+        if (userData?.profile) {
+            // If we already have the profile in userData, use it
+            console.log("Using existing profile from userData");
+            setProfile(userData.profile);
+            setValue("username", userData.profile.username);
+            setValue("bio", userData.profile.bio || "");
+            setLoading(false);
+        } else if (userData?.user?.email) {
+            console.log("Starting profile load with email:", userData.user.email);
+            loadProfile();
+        } else {
+            console.log("No user data or email available");
+            setLoading(false);
+        }
+    }, [userData, setValue]);
+
 
     // Autosave functionality
     const handleAutoSave = async (data) => {
@@ -81,7 +102,7 @@ function PostForm({ post }) {
                 if (file) {
                     try {
                         // First get the user's profile to get their ID
-                        const userProfile = await appwriteService.getProfile(userData.user.email);
+                        const userProfile = userData.profile.userId;
                         if (!userProfile) {
                             throw new Error("User profile not found");
                         }
@@ -90,7 +111,7 @@ function PostForm({ post }) {
                         data.featuredImage = fileId;
                         const dbPost = await appwriteService.createPost({
                             ...data,
-                            userId: userProfile.$id // Use the profile's ID
+                            userId: userProfile // Use the profile's ID
                         });
 
                         if (dbPost) {

@@ -5,30 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, MessageCircle, Bookmark, Share2 } from 'lucide-react'
 import appwriteService from "../appwrite/config"
 import { useSelector } from 'react-redux'
+import { useForm } from 'react-hook-form';
 
 function PostCard({ $id, slug, title, content, featuredImage, status, author, category = "General" }) {
   const navigate = useNavigate();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false)
   const [bookmarked, setBookmarked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [commentCount, setCommentCount] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
   const userData = useSelector((state) => state.auth.userData)
+  const { setValue } = useForm();
 
-  const handleBookmark = async (e) => {
-    e.preventDefault();
-    if (!userData?.$id) {
-      navigate('/login', {
-        state: {
-          message: 'Please log in to bookmark posts',
-          returnTo: `/post/${$id}`
-        }
-      });
-      return;
-    }
-    setBookmarked(!bookmarked);
-    // TODO: Implement bookmark functionality with Appwrite
-  }
 
   // Debug log to check props
   useEffect(() => {
@@ -38,19 +28,37 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
   const [userProfile, setUserProfile] = useState(null);
 
   // Effect to load user profile
+  // useEffect(() => {
+  //   const loadUserProfile = async () => {
+  //     if (userData?.user?.email) {
+  //       try {
+  //         const profile = await appwriteService.getProfile(userData.user.email);
+  //         setUserProfile(profile);
+  //       } catch (error) {
+  //         console.error('Error loading user profile:', error);
+  //       }
+  //     }
+  //   };
+  //   loadUserProfile();
+  // }, [userData?.user?.email]);
+
   useEffect(() => {
-    const loadUserProfile = async () => {
-      if (userData?.user?.email) {
-        try {
-          const profile = await appwriteService.getProfile(userData.user.email);
-          setUserProfile(profile);
-        } catch (error) {
-          console.error('Error loading user profile:', error);
-        }
-      }
-    };
-    loadUserProfile();
-  }, [userData?.user?.email]);
+    console.log("Profile component userData:", userData);
+    if (userData?.profile) {
+      // If we already have the profile in userData, use it
+      console.log("Using existing profile from userData");
+      setProfile(userData.profile);
+      setValue("username", userData.profile.username);
+      setValue("bio", userData.profile.bio || "");
+      setLoading(false);
+    } else if (userData?.user?.email) {
+      console.log("Starting profile load with email:", userData.user.email);
+      loadProfile();
+    } else {
+      console.log("No user data or email available");
+      setLoading(false);
+    }
+  }, [userData, setValue]);
 
   // Effect to load likes and comments
   useEffect(() => {
@@ -60,10 +68,9 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
           const likes = await appwriteService.getLikes($id);
           setLikeCount(likes.length);
 
-          if (userProfile) {
-            const hasLiked = likes.some(like => like.userId === userProfile.$id);
+          
+            const hasLiked = likes.some(like => like.userId === userData.profile.userId);
             setLiked(hasLiked);
-          }
         } catch (error) {
           console.error('Error loading likes:', error);
         }
@@ -87,8 +94,10 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
 
   const handleLike = async (e) => {
     e.preventDefault();
-    if (!userData?.user?.email) {
-      // Redirect to login page
+    console.log('Handle like clicked for post:', $id);
+
+    if (!userData.email) {
+      console.log('User not logged in, redirecting to login');
       navigate('/login', {
         state: {
           message: 'Please log in to like posts',
@@ -104,26 +113,31 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
         return;
       }
 
-      if (!userProfile) {
-        console.error('User profile not found');
-        return;
-      }
+
+      console.log('Attempting to', liked ? 'unlike' : 'like', 'post', $id);
 
       // Optimistically update UI
-      setLiked(!liked);
-      setLikeCount(prev => liked ? prev - 1 : prev + 1);
+      const wasLiked = liked;
+      setLiked(!wasLiked);
+      setLikeCount(prev => wasLiked ? prev - 1 : prev + 1);
 
-      const result = liked
-        ? await appwriteService.unlikePost($id, userData.user.email)
-        : await appwriteService.likePost($id, userData.user.email);
+      const result = wasLiked
+        ? await appwriteService.unlikePost($id, userData.email)
+        : await appwriteService.likePost($id, userData.email);
 
       if (!result) {
+        console.log('Like/unlike operation failed, reverting UI');
         // Revert if operation failed
-        setLiked(liked);
-        setLikeCount(prev => liked ? prev + 1 : prev - 1);
+        setLiked(wasLiked);
+        setLikeCount(prev => wasLiked ? prev + 1 : prev - 1);
+      } else {
+        console.log('Like/unlike operation successful');
       }
     } catch (error) {
       console.error('Error handling like:', error);
+      // Revert UI state in case of error
+      setLiked(liked);
+      setLikeCount(prev => liked ? prev - 1 : prev + 1);
     }
   };
 
@@ -228,8 +242,8 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
             >
               <Heart
                 className={`h-4 w-4 transition-all duration-300 ${liked
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-primary'
+                  ? 'fill-red-500 text-red-500'
+                  : 'text-primary'
                   }`}
               />
               <span className={`${liked ? 'text-red-600 dark:text-red-400' : ''

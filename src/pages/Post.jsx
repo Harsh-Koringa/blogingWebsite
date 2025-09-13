@@ -6,6 +6,7 @@ import { Button, Container, Comments } from "../components";
 import parse from "html-react-parser";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
+import { useForm } from "react-hook-form";
 
 export default function Post() {
     const [post, setPost] = useState(null);
@@ -13,9 +14,13 @@ export default function Post() {
     const navigate = useNavigate();
     const location = useLocation();
     const fromCard = location.state?.animation || false;
+    const { setValue } = useForm();
+    const [loading, setLoading] = useState(false);
+    const [profile, setProfile] = useState(null);
 
     const userData = useSelector((state) => state.auth.userData);
-    const isAuthor = post && userData ? post.userId === userData.$id : false;
+    const isAuthor = post && userData ? post.userId === userData.profile.userId : false;
+    console.log(isAuthor);
 
     useEffect(() => {
         if (slug) {
@@ -25,6 +30,24 @@ export default function Post() {
             });
         } else navigate("/");
     }, [slug, navigate]);
+
+    useEffect(() => {
+        console.log("Profile component userData:", userData);
+        if (userData?.profile) {
+            // If we already have the profile in userData, use it
+            console.log("Using existing profile from userData");
+            setProfile(userData.profile);
+            setValue("username", userData.profile.username);
+            setValue("bio", userData.profile.bio || "");
+            setLoading(false);
+        } else if (userData?.user?.email) {
+            console.log("Starting profile load with email:", userData.user.email);
+            loadProfile();
+        } else {
+            console.log("No user data or email available");
+            setLoading(false);
+        }
+    }, [userData, setValue]);
 
     const deletePost = () => {
         appwriteService.deletePost(post.$id).then((status) => {

@@ -323,87 +323,6 @@ export class Service {
     // }
 
 
-    async likePost(postId, userEmail) {
-        try {
-            if (!postId || !userEmail) {
-                console.log("Service :: likePost :: Missing required parameters");
-                return false;
-            }
-
-            // First get the user's profile to get their ID
-            const userProfile = await this.getProfile(userEmail);
-            if (!userProfile) {
-                console.log("Service :: likePost :: User profile not found");
-                return false;
-            }
-
-            const profileId = userProfile.$id;
-
-            // Create shorter ID using first 8 chars of profileId + last 8 chars of postId
-            const shortUserId = profileId.substring(0, 8);
-            const shortPostId = postId.slice(-8);
-            const likeId = `${shortUserId}_${shortPostId}`;
-
-            const data = {
-                userId: profileId, // Use the profile's ID
-                postId,
-                createdAt: new Date().toISOString()
-            };
-
-            console.log("Creating like document:", { likeId, data });
-
-            const result = await this.databases.createDocument(
-                conf.appwriteDatabaseId,
-                conf.appwriteLikesCollection,
-                likeId,
-                data
-            );
-
-            return result ? true : false;
-        } catch (error) {
-            console.log("Service :: likePost :: error", error);
-            return false;
-        }
-    }
-
-    async unlikePost(postId, userEmail) {
-        try {
-            if (!postId || !userEmail) {
-                console.log("Service :: unlikePost :: Missing required parameters");
-                return false;
-            }
-
-            // First get the user's profile to get their ID
-            const userProfile = await this.getProfile(userEmail);
-            if (!userProfile) {
-                console.log("Service :: unlikePost :: User profile not found");
-                return false;
-            }
-
-            const profileId = userProfile.$id;
-
-            // Use same pattern as likePost
-            const shortUserId = profileId.substring(0, 8);
-            const shortPostId = postId.slice(-8);
-            const likeId = `${shortUserId}_${shortPostId}`;
-
-            console.log("Deleting like document:", { likeId });
-
-            await this.databases.deleteDocument(
-                conf.appwriteDatabaseId,
-                conf.appwriteLikesCollection,
-                likeId
-            );
-
-            return true;
-        } catch (error) {
-            console.log("Service :: unlikePost :: error", error);
-            return false;
-        }
-    }
-
-
-
     async getLikes(postId) {
         try {
             const response = await this.databases.listDocuments(
@@ -415,6 +334,101 @@ export class Service {
         } catch (error) {
             console.log("Service :: getLikes :: error", error);
             return [];
+        }
+    }
+
+    async likePost(postId, userEmail) {
+        try {
+            if (!postId || !userEmail) {
+                console.log("Service :: likePost :: Missing required parameters");
+                return false;
+            }
+
+            console.log("Attempting to like post:", { postId, userEmail });
+
+            const userProfile = await this.getProfile(userEmail);
+            if (!userProfile) {
+                console.log("Service :: likePost :: User profile not found for email:", userEmail);
+                return false;
+            }
+
+            // Check if user has already liked the post
+            const existingLike = await this.databases.listDocuments(
+                conf.appwriteDatabaseId,
+                conf.appwriteLikesCollection,
+                [
+                    Query.equal('postId', postId),
+                    Query.equal('userId', userProfile.$id)
+                ]
+            );
+
+            if (existingLike.documents.length > 0) {
+                console.log("User has already liked this post");
+                return true; // Already liked
+            }
+
+            console.log("Creating like with profile:", userProfile);
+
+            const result = await this.databases.createDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteLikesCollection,
+                ID.unique(),
+                {
+                    postId,
+                    userId: userProfile.$id,
+                    createdAt: new Date().toISOString()
+                }
+            );
+
+            console.log("Like created successfully:", result);
+            return true;
+        } catch (error) {
+            console.error("Service :: likePost :: error", error);
+            return false;
+        }
+    }
+
+    async unlikePost(postId, userEmail) {
+        try {
+            if (!postId || !userEmail) {
+                console.log("Service :: unlikePost :: Missing required parameters");
+                return false;
+            }
+
+            console.log("Attempting to unlike post:", { postId, userEmail });
+
+            const userProfile = await this.getProfile(userEmail);
+            if (!userProfile) {
+                console.log("Service :: unlikePost :: User profile not found for email:", userEmail);
+                return false;
+            }
+
+            // Find the like document
+            const response = await this.databases.listDocuments(
+                conf.appwriteDatabaseId,
+                conf.appwriteLikesCollection,
+                [
+                    Query.equal('postId', postId),
+                    Query.equal('userId', userProfile.$id)
+                ]
+            );
+
+            if (response.documents.length > 0) {
+                // Delete the like document
+                await this.databases.deleteDocument(
+                    conf.appwriteDatabaseId,
+                    conf.appwriteLikesCollection,
+                    response.documents[0].$id
+                );
+                console.log("Like removed successfully");
+                return true;
+            }
+
+            console.log("No like found to remove");
+            return false;
+        } catch (error) {
+            console.error("Service :: unlikePost :: error", error);
+            return false;
         }
     }
 

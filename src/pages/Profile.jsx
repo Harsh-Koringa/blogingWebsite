@@ -164,7 +164,7 @@ function Profile() {
                         <div className="space-y-4">
                             <div>
                                 <h2 className="text-sm font-medium text-muted-foreground">Email</h2>
-                                <p className="text-lg">{userData.user.email}</p>
+                                <p className="text-lg">{userData.email}</p>
                             </div>
                             <div>
                                 <h2 className="text-sm font-medium text-muted-foreground">Username</h2>
