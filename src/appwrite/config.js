@@ -206,7 +206,7 @@ export class Service {
                 queries
             );
             if (response && response.documents) {
-                console.log("Retrieved posts:", response.documents); // Debug log
+                //console.log("Retrieved posts:", response.documents); // Debug log
                 return response;
             }
             return null;

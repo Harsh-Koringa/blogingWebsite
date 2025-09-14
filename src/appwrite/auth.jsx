@@ -254,8 +254,8 @@ export class AuthService {
                             email: data.user.email,
                             username: data.user.username,
                             name: data.user.name,
-                            createdAt: data.user.createdAt,
-                            lastLogin: new Date().toISOString()
+                            //createdAt: data.user.createdAt,
+                            //lastLogin: new Date().toISOString()
                         }
                     );
                     console.log('Successfully created Appwrite profile:', profile);

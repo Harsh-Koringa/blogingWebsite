@@ -35,6 +35,22 @@ function Signup() {
         }
 
         try {
+            const { exists } = await authService.checkUserExists(data.email);
+            if (exists) {
+                setError('Account already exists. Redirecting to login…');
+                setTimeout(
+                    () => navigate('/login', { state: { email: data.email } }),
+                    2_000
+                );
+                return;                       // ⬅️ stop here; no OTP, no createAccount
+            }
+        } catch (err) {
+            console.error('Email-check failed:', err);
+            setError('Could not verify email. Please try again.');
+            return;
+        }
+
+        try {
             // This will send OTP
             const result = await authService.createAccount(
                 data.email,
@@ -48,14 +64,6 @@ function Signup() {
             console.error("Signup error:", error);
             if (error.message.includes("logout before creating")) {
                 setError("You are already logged in. Please log out first.");
-            } else if (error.message.includes("account with this email already exists")) {
-                // Add a small delay before redirecting to make sure the error message is seen
-                setError("Account already exists. Redirecting to login...");
-                setTimeout(() => {
-                    navigate("/login", {
-                        state: { email: data.email } // Pass email to login form
-                    });
-                }, 2000);
             } else {
                 setError(error.message || "Failed to start signup process. Please try again.");
             }

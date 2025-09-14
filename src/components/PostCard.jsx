@@ -22,7 +22,7 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
 
   // Debug log to check props
   useEffect(() => {
-    console.log("PostCard props:", { $id, slug, title })
+    //console.log("PostCard props:", { $id, slug, title })
   }, [$id, slug, title]);
 
   const [userProfile, setUserProfile] = useState(null);
@@ -51,10 +51,16 @@ function PostCard({ $id, slug, title, content, featuredImage, status, author, ca
       setValue("username", userData.profile.username);
       setValue("bio", userData.profile.bio || "");
       setLoading(false);
-    } else if (userData?.user?.email) {
-      console.log("Starting profile load with email:", userData.user.email);
-      loadProfile();
-    } else {
+    }else{ 
+    
+    if (!window.__profileReloaded__) {
+    console.log('Profile missing – reloading page once…');
+    window.__profileReloaded__ = true;             // guard flag
+    window.location.reload();
+    return;
+    }
+    }
+    if(userData?.profile) {
       console.log("No user data or email available");
       setLoading(false);
     }
